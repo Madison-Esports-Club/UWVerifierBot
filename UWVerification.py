@@ -46,7 +46,7 @@ async def on_message(message):
 	await bot.process_commands(message) #Enables commands
 ###########################################################################
 try: #Config var in Heroku
-	bot.run(os.environ["DISCORDTOKEN"])
+	bot.run(os.environ["DISCORD_TOKEN"])
 except: #Runs from system
 	config_object=ConfigParser()
 	config_object.read("BotVariables.ini")
