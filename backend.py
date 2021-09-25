@@ -9,7 +9,7 @@ def is_verified(user_id):
 #returns either the email that the specified user is verified with, or None
 def get_verified_email(user_id):"""
 
-import os
+"""import os
 import psycopg2
 
 DATABASE_URL = os.environ['DATABASE_URL']
@@ -37,4 +37,4 @@ def log_verification(user_id, guild_id, email):
 	if(rowcount != 1):
 		print("Failed to log verified email " + email + " for user " + user_id)
 
-def
+def"""
