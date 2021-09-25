@@ -18,7 +18,7 @@ def dbconnect():               #When calling from a function in another file use
         config_object.read("BotVariables.ini")
         variables=config_object["variables"]
         DATABASE_URL=variables["DATABASE_URL"]
-        conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+        conn = psycopg2.connect(DATABASE_URL, sslmode='prefer')
         cursor = conn.cursor()
     return cursor, conn
 ###########################################################################
