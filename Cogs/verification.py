@@ -48,51 +48,52 @@ class Verification(commands.Cog):
 			email: The email address they want to use
 		Returns:
 			success, message: a boolean saying if the user was verified, and a message to return to the user.
-							Note that users who are already verified will cause this method to return false.
+							Note that users who are already verified will cause this method to return False.
 		"""
-		print("verifying " +str(user_id) + " with email "+email)
 		if(self.is_verified(user_id)):
 			return False, "You're already verified!"
 
 		#Check that its a wisc.edu ending at least
 		if(email.split('@')[-1] != "wisc.edu"):
-			return False, email + " is not a wisc.edu email address."
+			return False, f"{email} is not a wisc.edu email address."
 
 		cursor, conn = dbconnect()
 		cursor.execute("SELECT user_id FROM verified_users WHERE email = %s;", (email,))
 		if(cursor.rowcount > 0):
-			print(user_id + "Tried to verify with email " + email + " which is already in use by " + cursor.fetchone()[0])
-			return false, "That email is already in use, talk to a board member if you believe this is an error"
+			print(f"{user_id} Tried to verify with email {email} which is already in use by {cursor.fetchone()[0]}")
+			return False, "That email is already in use, talk to a board member if you believe this is an error"
 
 		real, message = self.verify_email(email)
 		if(real):
-			cursor.execute("INSERT INTO verified_users (user_id, email, time) VALUES (%s, %s, %s);", (user_id, email, datetime.datetime.utcnow()))
-			return True, "Congratulations, you are now verified with the email " + email + "!"
+			cursor.execute("INSERT INTO verified_users (user_id, email, time) VALUES (%s, %s, TIMESTAMP %s);", [user_id, email, datetime.datetime.utcnow()])
+			conn.commit()
+			conn.close()
+			return True, f"Congratulations, you are now verified with the email {email}!"
 		if(message == "limit"):
+			conn.close()
 			return False, "Verification daily limit reached, please try again in 24 hours."
 		if(message == "Unknown"):
+			conn.close()
 			return False, "Unknown error occurred, please wait a while and try again. Reach out to a board member if this issue persists."
 
-		return False, "Sorry, the email address " + email + " is not a valid wisc.edu email address"
+		conn.close()
+		return False, f"Sorry, the email address {email} is not a valid wisc.edu email address"
 ###########################################################################
 	def is_verified(self, user_id):
 		"""
 		Returns whether or not the specified user is already verified
 		"""
-		print("deciding if " +str(user_id) + " is verified")
 		return self.get_verified_email(user_id) != None
 ###########################################################################
 	def get_verified_email(self, user_id):
 		"""
 		Returns the verified email associated with the specified user, or None if the user is not verified
 		"""
-		print("getting " +str(user_id) + "'s verified email")
 		cursor, conn = dbconnect()
 		cursor.execute("SELECT email FROM verified_users WHERE user_id = %s;", (user_id,))
 		if(cursor.rowcount != 1):
 			return None
 		email = cursor.fetchone()[0]
-		print("got " + email)
 		conn.close()
 		return email
 ###########################################################################
@@ -106,6 +107,7 @@ class Verification(commands.Cog):
 		if(cursor.rowcount > 0):
 			return cursor.fetchone()[3], "cached"
 
+		#Check that we havnt hit our limit for today
 		cursor.execute("SELECT time, daily_request_number FROM verification_requests ORDER BY time DESC LIMIT 1;")
 		row = cursor.fetchone()
 		number = row[1] + 1
@@ -119,6 +121,7 @@ class Verification(commands.Cog):
 			print("HIT DAILY REQUEST LIMIT")
 			return False, "limit"
 
+		#run request
 		response = requests.get("https://isitarealemail.com/api/email/validate",
 	    params = {'email': email})
 
@@ -129,11 +132,12 @@ class Verification(commands.Cog):
 		elif status == "invalid":
 			real = False
 		else:
-			print("email was unknown: " + email + ", with response: " + response)
+			print(f"email was unknown: {email}, with response: {response}")
 			return False, "Unknown"
 
-		cursor.execute("INSERT INTO verification_requests(email, time, daily_request_number, result) VALUES (%s %s %s %s);", (email, current, number, real))
-		cursor.commit()
+		#save request result
+		cursor.execute("INSERT INTO verification_requests(email, time, daily_request_number, result) VALUES (%s, TIMESTAMP %s, %s, %s);", (email, current, number, real))
+		conn.commit()
 		conn.close()
 		return real, "from server"
 ###########################################################################
