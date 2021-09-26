@@ -38,12 +38,11 @@ class Verification(commands.Cog):
 
                 message = "You have been successfully verified!"
                 await ctx.send(embed = discord.Embed(title = message, color = color))
-
+                role = discord.utils.get(ctx.guild.roles, name = "Verified")
+                await author.add_roles(role)
             except asyncioTimeout: #asyncio.TimeoutError
                 #So this wont work. Once the verify_user method is called on a user_id, it will fail if run again. if it times out, they cannot restart it.
                 return await ctx.send(embed=discord.Embed(title="Connection timed out! Enter the original command to restart", color = discord.Color.orange()))
-            role = discord.utils.get(ctx.guild.roles, name = "Verified")
-            await author.add_roles(role)
         else: #Verification errored, or they have a verification record already in the DB, but lost the role
             await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))
 
