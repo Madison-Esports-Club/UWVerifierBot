@@ -7,6 +7,7 @@ import json
 from configparser import ConfigParser
 
 from Cogs.db import dbconnect
+from Cogs.verification import is_verified
 
 bot=commands.Bot(command_prefix = commands.when_mentioned_or("!")
 				,case_insensative = True
@@ -37,14 +38,9 @@ async def on_ready():
 
 	print (bot.user.name, "successfully connected to Discord")
 ###########################################################################
-@bot.event #Gives Verified role to user if they are in the db already 
+@bot.event #Gives Verified role to user if they are in the db already
 async def on_member_join(member):
-    cursor, conn = dbconnect()
-    cursor.execute("SELECT user_id FROM verified_users WHERE user_id = %s;", (member.id,))
-    result = cursor.fetchone()
-    conn.close()
-
-    if result is not None:
+    if is_verified(member.id):
 		# This should be replaced with searching for a role with the name "Verified" rather than a role id, so we can use it on the child servers
         role = discord.utils.get(member.guild.roles, id = 887379146857144461) #Currently a test role, replace id with correct Verified role when added to main server
         await member.add_roles(role)
