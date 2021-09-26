@@ -34,15 +34,16 @@ class Verification(commands.Cog):
 
             try:
                 response = await self.bot.wait_for("message", check = check, timeout=30)
-
-                #response == name
-                #Insert name into database here
+                insert_name(response.content, author.id)
 
                 message = "You have been successfully verified!"
                 await ctx.send(embed = discord.Embed(title = message, color = color))
 
             except asyncioTimeout: #asyncio.TimeoutError
+                #So this wont work. Once the verify_user method is called on a user_id, it will fail if run again. if it times out, they cannot restart it.
                 return await ctx.send(embed=discord.Embed(title="Connection timed out! Enter the original command to restart", color = discord.Color.orange()))
+            role = discord.utils.get(ctx.guild.roles, name = "Verified")
+            await author.add_roles(role)
         else: #Verification errored, or they have a verification record already in the DB, but lost the role
             await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))
 
@@ -95,6 +96,8 @@ def verify_user(user_id, email):
     real, message = verify_email(email)
     if(real):
         cursor.execute("INSERT INTO verified_users (user_id, email, time) VALUES (%s, %s, TIMESTAMP %s);", [user_id, email, datetime.datetime.utcnow()])
+        if(cursor.rowcount != 1):
+            print(f"failed to insert verification record ({user_id}, {email}, {time})")
         conn.commit()
         conn.close()
         return True, f"Congratulations, you are now verified with the email **{email}**!", discord.Color.green()
@@ -166,9 +169,20 @@ def verify_email(email):
 
     #save request result
     cursor.execute("INSERT INTO verification_requests(email, time, daily_request_number, result) VALUES (%s, TIMESTAMP %s, %s, %s);", (email, current, number, real))
+    if(cursor.rowcount != 1):
+        print(f"failed to insert verification request ({email}, {time}, {daily_request_number}, {result})")
     conn.commit()
     conn.close()
     return real, "from server"
+###########################################################################
+def insert_name(full_name, user_id):
+    print(f"giving user {user_id} the name {full_name}")
+    cursor, conn = dbconnect()
+    cursor.execute("UPDATE verified_users SET full_name = %s WHERE user_id = %s;", (full_name, user_id))
+    if(cursor.rowcount != 1):
+        print(f"Failed to give user {user_id} the name {full_name}")
+    conn.commit()
+    conn.close()
 ###########################################################################
 def setup(bot):
     bot.add_cog(Verification(bot))
