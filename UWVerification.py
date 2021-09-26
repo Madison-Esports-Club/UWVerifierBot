@@ -45,8 +45,9 @@ async def on_member_join(member):
     conn.close()
 
     if result is not None:
+		# This should be replaced with searching for a role with the name "Verified" rather than a role id, so we can use it on the child servers
         role = discord.utils.get(member.guild.roles, id = 887379146857144461) #Currently a test role, replace id with correct Verified role when added to main server
-        await member.add_roles(role) 
+        await member.add_roles(role)
 ###########################################################################
 @bot.event #If user just types '!'
 async def on_message(message):
