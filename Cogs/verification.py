@@ -24,8 +24,8 @@ class Verification(commands.Cog):
         verified, message, color = verify_user(ctx.author.id, email)
         response = "Thank you for submitting your verification request, it will be processed within 24 hours."
 
-        def check(user): #Makes sure user replying equal to user who started the command
-            return user != self.bot.user and author == ctx.author
+        def check(message): #Makes sure user replying equal to user who started the command
+            return message.author.id != self.bot.user.id and message.author.id == ctx.author.id
 
         if verified: #Prompts user to enter name to finish verifying
             author = ctx.message.author
@@ -34,10 +34,11 @@ class Verification(commands.Cog):
 
             try:
                 response = await self.bot.wait_for("message", check = check, timeout=30)
-                insert_name(response.content, author.id)
 
                 message = "You have been successfully verified!"
                 await ctx.send(embed = discord.Embed(title = message, color = color))
+                
+                insert_verified_user_record(author.id, email, response.content)
                 role = discord.utils.get(ctx.guild.roles, name = "Verified")
                 await author.add_roles(role)
             except asyncioTimeout: #asyncio.TimeoutError
@@ -68,9 +69,19 @@ class Verification(commands.Cog):
     '''
 
 ###########################################################################
+def insert_verified_user_record(user_id, email, name):
+    cursor, conn = dbconnect()
+    cursor.execute("INSERT INTO verified_users (user_id, email, time, full_name) VALUES (%s, %s, TIMESTAMP %s, %s);", [user_id, email, datetime.datetime.utcnow(), name])
+    if(cursor.rowcount != 1):
+        print(f"failed to insert verification record ({user_id}, {email}, {time})")
+    conn.commit()
+    conn.close()
+    return
+###########################################################################
 def verify_user(user_id, email):
     """
-    Attempts to verify the specified user with the specified email address
+    Attempts to verify the specified user with the specified email address.
+    This method does not commit any records to the server!
 
     Args:
         user_id: The discord userid of the user to be verified
@@ -82,32 +93,22 @@ def verify_user(user_id, email):
     if(is_verified(user_id)):
         return False, "You have already been verified, please contact a Board Member or Bot Administrator if you need to receive the role again", discord.Color.red()
 
-    #Check that its a wisc.edu ending at least
-    if(email.split('@')[-1] != "wisc.edu"):
-        return False, f"**{email}** is not a wisc.edu email address.", discord.Color.red()
-
     cursor, conn = dbconnect()
     cursor.execute("SELECT user_id FROM verified_users WHERE email = %s;", (email,))
     if(cursor.rowcount > 0):
         print(f"{user_id} Tried to verify with email {email} which is already in use by {cursor.fetchone()[0]}")
         return False, "That email is already in use, talk to a board member if you believe this is an error", discord.Color.red()
+    conn.close()
 
     real, message = verify_email(email)
     if(real):
-        cursor.execute("INSERT INTO verified_users (user_id, email, time) VALUES (%s, %s, TIMESTAMP %s);", [user_id, email, datetime.datetime.utcnow()])
-        if(cursor.rowcount != 1):
-            print(f"failed to insert verification record ({user_id}, {email}, {time})")
-        conn.commit()
-        conn.close()
         return True, f"Congratulations, you are now verified with the email **{email}**!", discord.Color.green()
-        if(message == "limit"):
-            conn.close()
-            return False, "Verification daily limit reached, please try again in 24 hours.", discord.Color.red()
+
+    if(message == "limit"):
+        return False, "Verification daily limit reached, please try again in 24 hours.", discord.Color.red()
     if(message == "Unknown"):
-        conn.close()
         return False, "Unknown error occurred, please wait a while and try again. Reach out to a board member if this issue persists.", discord.Color.orange()
 
-    conn.close()
     return False, f"Sorry, the email address **{email}** is not a valid wisc.edu email address", discord.Color.red()
 ###########################################################################
 def is_verified(user_id):
@@ -132,6 +133,10 @@ def verify_email(email):
     """
     Attempts to verify an email address.
     """
+
+    #Check that its a wisc.edu ending at least
+    if(email.split('@')[-1] != "wisc.edu"):
+        return False, "not wisc.edu"
     cursor, conn = dbconnect()
     #Check if this email has been tried recently(one week)
     # cursor.execute("SELECT * FROM verification_requests WHERE email = %s AND time > now() - interval '1 week';", (email,))
