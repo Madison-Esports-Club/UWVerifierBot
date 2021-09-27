@@ -40,10 +40,98 @@ async def on_ready():
 ###########################################################################
 @bot.event #Gives Verified role to user if they are in the db already
 async def on_member_join(member):
-    if is_verified(member.id):
-        # This should be replaced with searching for a role with the name "Verified" rather than a role id, so we can use it on the child servers
-        role = discord.utils.get(member.guild.roles, id = 887379146857144461) #Currently a test role, replace id with correct Verified role when added to main server
-        await member.add_roles(role)
+	if is_verified(member.id):
+		for role in member.guild.roles: #Checks to see if Verified role exists
+			if role.name.lower()=="verified":
+				verifiedRole=role
+				break
+		'''if not verifiedRole: #If Verified role doesn't exist, creates one			
+			perms = discord.Permissions(send_messages = True)
+			verifiedRole = await member.guild.create_role(name = "Verified", color = discord.Color.dark_grey(), permissions = perms)
+			for channel in member.guild.channels:
+				await channel.set_permissions(verifiedRole, send_messages = True)'''
+
+		#role = discord.utils.get(member.guild.roles, id = 887379146857144461) #Currently a test role, replace id with correct Verified role when added to main server
+		await member.add_roles(verifiedRole)
+###########################################################################
+@bot.event #Sends message and gif on user joining server
+async def on_member_join(member):
+	cursor, conn = dbconnect() #Opens connection to db
+
+	sql = ("SELECT setting_value FROM guild_settings WHERE (guild_id = %s AND setting = %s)")
+	cursor.execute(sql, (member.guild.id, "welcome_channel"))
+	result = cursor.fetchone()
+	
+	if result is not None: #Custom channel exists
+		channel = member.guild.get_channel(int(result[0]))
+	else: #System channel
+		channel = member.guild.system_channel
+
+	sql = ("SELECT setting_value FROM guild_settings WHERE (guild_id = %s AND setting = %s)")
+	cursor.execute(sql, (member.guild.id, "welcome_status"))
+	result = cursor.fetchone()
+    
+	if result is None or result[0] == "True": #welcome_status does not exist or is true
+		sql = ("SELECT setting_value FROM guild_settings WHERE (guild_id = %s AND setting = %s)")
+		cursor.execute(sql, (member.guild.id, "welcome_msg"))
+		result = cursor.fetchone()
+		
+		if result is None: #Custom welcome message does not exist
+			message = "Welcome %s to the server!"
+		else: #Custom message does exist
+			message = result[0]
+		
+		sql = ("SELECT setting_value FROM guild_settings WHERE (guild_id = %s AND setting = %s)")
+		cursor.execute(sql, (member.guild.id, "welcome_picture"))
+		result = cursor.fetchone()
+		
+		if result is None: #Default url
+			url = "https://media.tenor.co/images/3ccff8c4b2443d93811eac9b2fd56f11/raw"
+		else: #Custom url for image
+			url = result[0]
+        
+		await channel.send(message %member.mention)
+		embed = discord.Embed()
+		embed.set_image(url = url)
+		await channel.send(embed = embed)
+	conn.close() #Closes connection to db
+###########################################################################
+@bot.event #Sends a message when someone leaves the server
+async def on_member_remove(member):
+    cursor, conn = dbconnect() #Opens connection to db
+    
+    sql = ("SELECT setting_value FROM guild_settings WHERE (guild_id = %s AND setting = %s)")
+    cursor.execute(sql, (member.guild.id, "leave_channel"))
+    result = cursor.fetchone()
+    if result is not None:
+        channel = member.guild.get_channel(int(result[0]))
+    else:
+        channel = member.guild.system_channel
+
+    sql = ("SELECT setting_value FROM guild_settings WHERE (guild_id = %s AND setting = %s)")
+    cursor.execute(sql, (member.guild.id, "leave_status"))
+    result = cursor.fetchone()
+    
+    if result is None or result[0] == "True": #welcome_status does not exist or is true
+        sql = ("SELECT setting_value FROM guild_settings WHERE (guild_id = %s AND setting = %s)")
+        cursor.execute(sql, (member.guild.id, "leave_msg"))
+        result = cursor.fetchone()
+        if result is None: #Custom welcome message does not exist
+            message = "Adios **%s**..."
+        else: #Custom message does exist
+            message = result[0]
+        sql = ("SELECT setting_value FROM guild_settings WHERE (guild_id = %s AND setting = %s)")
+        cursor.execute(sql, (member.guild.id, "leave_picture"))
+        result = cursor.fetchone()
+        if result is None: #Default url
+            url = "https://media.giphy.com/media/26u4b45b8KlgAB7iM/giphy.gif?cid=790b7611485e4b17dd30b01e42eae6ed2568acb8d39c1e23&rid=giphy.gif&ct=g"
+        else: #Custom url for image
+            url = result[0]
+        await channel.send(message %member)
+        embed = discord.Embed()
+        embed.set_image(url = url)
+        await channel.send(embed = embed)
+    conn.close() #Closes connection to db
 ###########################################################################
 @bot.event #If user just types '!'
 async def on_message(message):
