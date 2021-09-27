@@ -37,7 +37,7 @@ class Verification(commands.Cog):
 
                 message = "You have been successfully verified!"
                 await ctx.send(embed = discord.Embed(title = message, color = color))
-                
+
                 insert_verified_user_record(author.id, email, response.content)
                 role = discord.utils.get(ctx.guild.roles, name = "Verified")
                 await author.add_roles(role)
@@ -50,7 +50,36 @@ class Verification(commands.Cog):
     @verify.error
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(embed = discord.Embed(title = "Missing required permission", description = "Correct usage: !verify **name@wisc.edu** ", color= discord.Color.red()))
+            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !verify **name@wisc.edu** ", color = discord.Color.red()))
+
+    @commands.command(name='whois')
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Developer', 'Mod', 'Faculty Advisor')
+    async def whois(self, ctx, tag):
+        if('#' not in tag):
+            return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
+
+        parts = tag.split('#', 1)
+        name_part = parts[0]
+        discriminator_part = parts[1]
+
+        member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
+        if member is None:
+            return await ctx.send(embed = discord.Embed(title = "Unkown user", description = f"Could not find {tag} in this server", color = discord.Color.red()))
+
+        email, name, time = get_verification_record(member.id)
+        if(email is None):
+            return await ctx.send(embed = discord.Embed(title = "Not Verified", description = f"{tag} is not verified.", color = discord.Color.orange()))
+
+        return await ctx.send(embed = discord.Embed(description = f"{tag} was verified under the email {email} and the name {name} at {time}.", color = discord.Color.green()))
+
+    @whois.error
+    async def clear_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !whois UserName#0000", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            print(f"non-admin {ctx.message.author} tried to use whois")
+        else:
+            print(error)
 
     '''
     Example cog function:
@@ -121,13 +150,24 @@ def get_verified_email(user_id):
     """
     Returns the verified email associated with the specified user, or None if the user is not verified
     """
-    cursor, conn = dbconnect()
-    cursor.execute("SELECT email FROM verified_users WHERE user_id = %s;", (user_id,))
-    if(cursor.rowcount != 1):
-        return None
-    email = cursor.fetchone()[0]
-    conn.close()
+    email, name, time = get_verification_record(user_id)
     return email
+###########################################################################
+def get_verification_record(user_id):
+    """
+    Returns the verified_user row associated with the specified user_id, or None if the user is not verified
+    Returns email, name, timestamp
+    """
+    cursor, conn = dbconnect()
+    cursor.execute("SELECT email, full_name, time FROM verified_users WHERE user_id = %s;", (user_id,))
+    if(cursor.rowcount != 1):
+        return None, None, None
+    row = cursor.fetchone()
+    email = row[0]
+    name = row[1]
+    time = row[2]
+    conn.close()
+    return email, name, time
 ###########################################################################
 def verify_email(email):
     """

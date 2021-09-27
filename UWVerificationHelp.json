@@ -1,19 +1,20 @@
 {
     "short": {
         "Verification":
-            "`verify`"
+            "`verify`, `whois`"
         ,
         "Misc":
             "`help`, `changelog`, `ping`"
         ,
         "Settings":
             "`setwelcomemsg`, `enablewelcomemsg`, `welcomepicture`, `setwelcomechannel`, `setleavemsg`, `enableleavemsg`, `leavepicture`, `leavepicture`"
-    
+
     },
 
     "full": {
         "verification":{
             "!verify (email@wisc.edu)": "Starts verification process to access server features, must have valid @wisc.edu email (i.e: !verify jSmith@wisc.edu)"
+            ,"!whois (UserName#0000)": "Returns the email address and name of the specified verified discord user. Only accessible to Board Members, Game Officers, and Mods"
         },
         "misc":{
             "!help": "Displays help menu"
@@ -35,7 +36,6 @@
 
     "changeLog":{
         "9/xx/21": "Initial release"
-
     },
 
 
