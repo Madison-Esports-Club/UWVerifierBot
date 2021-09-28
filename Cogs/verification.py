@@ -5,6 +5,7 @@ import psycopg2
 import datetime
 import requests
 from asyncio import TimeoutError as asyncioTimeout
+from pytz import timezone
 
 from Cogs.db import dbconnect
 
@@ -70,7 +71,15 @@ class Verification(commands.Cog):
         if(email is None):
             return await ctx.send(embed = discord.Embed(title = "Not Verified", description = f"{tag} is not verified.", color = discord.Color.orange()))
 
-        return await ctx.send(embed = discord.Embed(description = f"{tag} was verified under the email {email} and the name {name} at {time}.", color = discord.Color.green()))
+        if(name is None):
+            name = "*No name registered*"
+        time = time.astimezone(timezone("America/Chicago"))
+        timestamp = time.strftime("%m/%d/%Y, %I:%M %p %Z")
+        recordEmbed = discord.Embed(title = "Verification Record", color = discord.Color.green())
+        recordEmbed.add_field(name=("*Name*"),value = name,inline=False)
+        recordEmbed.add_field(name=("*Email*"),value = email,inline=False)
+        recordEmbed.add_field(name=("*Time Verified*"),value = timestamp,inline=False)
+        return await ctx.send(embed = recordEmbed)
 
     @whois.error
     async def clear_error(self, ctx, error):

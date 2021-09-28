@@ -1,3 +1,4 @@
 discord
 psycopg2
 requests
+pytz
