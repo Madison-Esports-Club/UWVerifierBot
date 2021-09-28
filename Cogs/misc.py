@@ -64,47 +64,47 @@ class Misc(commands.Cog):
             data = json.load(logFile)
         data = data["changeLog"]
         for key in data:
-            logEmbed.add_field(name=("*"+key+"*"),value=data[key],inline=False)
+            logEmbed.add_field(name=("*" + key + "*"),value = data[key],inline=False)
         
-        await ctx.send(embed=logEmbed)
+        await ctx.send(embed = logEmbed)
 ###########################################################################
-    @commands.command(name="purge", aliases=["clear","delete"]) #Clears previous x amount of messages (x between 1 & 50)
-    @commands.has_guild_permissions(manage_messages=True)
+    @commands.command(name = "purge", aliases = ["clear", "delete"]) #Clears previous x amount of messages (x between 1 & 50)
+    @commands.has_guild_permissions(manage_messages = True)
     async def purge(self, ctx, limit: int): 
-        if limit>50 or limit<1:
-            await ctx.send(embed=discord.Embed(title="Only 1 to 50 messages can be cleared at a time"))
+        if limit > 50 or limit < 1:
+            await ctx.send(embed = discord.Embed(title = "Only 1 to 50 messages can be cleared at a time"))
             return
         try:
-            await ctx.message.channel.purge(limit=(limit+1))
-            msg=await ctx.send(embed=discord.Embed(title=f"Previous {limit} messages deleted"))
+            await ctx.message.channel.purge(limit = (limit + 1))
+            msg = await ctx.send(embed = discord.Embed(title = f"Previous {limit} messages deleted"))
             await asyncio.sleep(2)
             await msg.delete()
         except discord.Forbidden:
-           await ctx.send(embed=discord.Embed(title="I do not have enough permissions to do this, please change my role permissions! "))
+           await ctx.send(embed = discord.Embed(title = "I do not have enough permissions to do this, please change my role permissions!"))
 
     @purge.error
     async def clear_error(self, ctx, error):
         if isinstance(error,commands.MissingPermissions):
-            await ctx.send(embed=discord.Embed(title="You do not have permission to use this command"))
-        elif isinstance(error,commands.BadArgument):
-            await ctx.send(embed=discord.Embed(title="Parameter must be an integer between 1 and 50"))
+            await ctx.send(embed = discord.Embed(title = "You do not have permission to use this command"))
+        elif isinstance(error, commands.BadArgument):
+            await ctx.send(embed = discord.Embed(title = "Parameter must be an integer between 1 and 50"))
         elif isinstance(error,commands.MissingRequiredArgument):
-            await ctx.send(embed=discord.Embed(title="Missing required argument, use !purge x"))
+            await ctx.send(embed = discord.Embed(title = "Missing required argument, use !purge x"))
 ###########################################################################
-    @commands.command(name="botinfo", aliases=["info"]) #Displays informaton about the bot
+    @commands.command(name = "botinfo", aliases = ["info"]) #Displays informaton about the bot
     async def botinfo(self, ctx):
-        infoDict={
+        infoDict = {
                 "Created": "September 2021"
                 ,"Language": "Python 3.8.1"
                 #,"Open Source GitHub": "https://github.com/DMLooter/UWVerifierBot"
                 }
-        infoEmbed=discord.Embed(title="Created by DMLooter#4251 & PureCache#0001Bot Information",color=discord.Color.orange())
-        infoEmbed.set_author(name="Created by DMLooter#4251 & PureCache#0001")
-        infoEmbed.set_footer(text="Prefix: !")
+        infoEmbed = discord.Embed(title = "UW Verification Bot Information", color = discord.Color.orange())
+        infoEmbed.set_author(name = "Created by DMLooter#4251 & PureCache#0001")
+        infoEmbed.set_footer(text = "Prefix: !")
 
         for key in infoDict:
-            infoEmbed.add_field(name=key,value=infoDict[key],inline=False)
-        await ctx.send(embed=infoEmbed)
+            infoEmbed.add_field(name = key,value = infoDict[key], inline = False)
+        await ctx.send(embed = infoEmbed)
 ###########################################################################
 def setup(bot):
     bot.add_cog(Misc(bot))
