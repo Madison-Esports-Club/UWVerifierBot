@@ -18,7 +18,7 @@ class Verification(commands.Cog):
     @commands.command(name='verify')
     async def verify(self, ctx, email):
         if(discord.utils.get(ctx.author.roles, name = "Verified") != None): # We could have this check the DB, would maybe cause issues with manually verified folks.
-            await ctx.send(embed = discord.Embed(title = "you are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
+            await ctx.send(embed = discord.Embed(title = "You are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
             return
         #print(ctx.author.id)
         verified, message, color = verify_user(ctx.author.id, email)
