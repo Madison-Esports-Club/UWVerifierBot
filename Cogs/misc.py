@@ -13,27 +13,27 @@ class Misc(commands.Cog):
             with open("UWVerificationHelp.json", "r") as helpFile:
                 data = json.load(helpFile)
             data = data['short']
-            
+
             embed = discord.Embed(title = "Help Menu\t\tPrefix: !", color=discord.Color.green())
             embed.set_author(name = "Type `!help [category]` to see an in-depth guide for the inputed category")
-            embed.set_footer(text = "Created by DMLooter#4151 & PureCache#0001")
+            embed.set_footer(text = "Created by DMLooter#4251 & PureCache#0001")
             embed.add_field(name = "Verification Commands", value = data["Verification"], inline = False)
             embed.add_field(name = "Miscellaneous Commands", value = data["Misc"], inline = False)
             embed.add_field(name = "Settings Commands", value = data["Settings"], inline = False)
-        
+
         else:
             with open("UWVerificationHelp.json", "r") as helpFile:
                 data = json.load(helpFile)
-            
+
             data = data["full"]
             data = data[type.lower()]
             embed = discord.Embed(title = (f"{type} commands:"), color = discord.Color.green())
             embed.set_author(name=("Key: (required) [optional]"))
-            embed.set_footer(text = "Created by DMLooter#4151 & PureCache#0001")
-            
+            embed.set_footer(text = "Created by DMLooter#4251 & PureCache#0001")
+
             for key in data:
                 embed.add_field(name = (f"`{key}`"), value = data[key], inline = False)
-        
+
         await ctx.send(embed=embed)
 
     @help.error
@@ -45,12 +45,12 @@ class Misc(commands.Cog):
         try:
             embed = discord.Embed(title = "**Ping :ping_pong:**", color = discord.Color.blurple())
             embed.add_field(name= "Quick Estimate", value = f"{round(self.bot.latency*1000,2)} ms")
-            
+
             tests = 300
             latencyList = []
             for x in range(tests):
                 latencyList.append(self.bot.latency)
-            
+
             embed.add_field(name = "Average", value=f"{round((sum(latencyList)/tests) * 1000, 2)} ms", inline = False)
             await ctx.send(embed = embed)
         except Exception as e:
@@ -59,18 +59,18 @@ class Misc(commands.Cog):
     @commands.command(name = "changelog", aliases = ["changes", "updates"]) #Displays bot's change log
     async def changelog(self, ctx):
         logEmbed = discord.Embed(title = "UW Verification Bot Change Log", color = discord.Color.teal())
-        
+
         with open("UWVerificationHelp.json","r") as logFile:
             data = json.load(logFile)
         data = data["changeLog"]
         for key in data:
             logEmbed.add_field(name=("*" + key + "*"),value = data[key],inline=False)
-        
+
         await ctx.send(embed = logEmbed)
 ###########################################################################
     @commands.command(name = "purge", aliases = ["clear", "delete"]) #Clears previous x amount of messages (x between 1 & 50)
     @commands.has_guild_permissions(manage_messages = True)
-    async def purge(self, ctx, limit: int): 
+    async def purge(self, ctx, limit: int):
         if limit > 50 or limit < 1:
             await ctx.send(embed = discord.Embed(title = "Only 1 to 50 messages can be cleared at a time"))
             return
