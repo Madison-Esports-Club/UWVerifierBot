@@ -188,8 +188,9 @@ def verify_email(email):
         return False, "not wisc.edu"
     cursor, conn = dbconnect()
     #Check if this email has been tried recently(one week)
-    # cursor.execute("SELECT * FROM verification_requests WHERE email = %s AND time > now() - interval '1 week';", (email,))
+    cursor.execute("SELECT * FROM verification_requests WHERE email = %s AND time > now() - interval '1 week';", (email,))
     if(cursor.rowcount > 0):
+        print(f"using Cached request for {email}")
         return cursor.fetchone()[3], "cached"
 
     #Check that we havnt hit our limit for today
