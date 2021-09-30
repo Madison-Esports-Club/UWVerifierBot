@@ -19,7 +19,7 @@ class Misc(commands.Cog):
             embed.set_footer(text = "Created by DMLooter#4251 & PureCache#0001")
             embed.add_field(name = "Verification Commands", value = data["Verification"], inline = False)
             embed.add_field(name = "Miscellaneous Commands", value = data["Misc"], inline = False)
-            embed.add_field(name = "Settings Commands", value = data["Settings"], inline = False)
+            #embed.add_field(name = "Settings Commands", value = data["Settings"], inline = False)
 
         else:
             with open("UWVerificationHelp.json", "r") as helpFile:
