@@ -45,13 +45,7 @@ async def on_member_join(member):
         if(verifiedRole is None):
             print(f"no verified role in server: {member.guild}")
             return
-        '''if not verifiedRole: #If Verified role doesn't exist, creates one
-            perms = discord.Permissions(send_messages = True)
-            verifiedRole = await member.guild.create_role(name = "Verified", color = discord.Color.dark_grey(), permissions = perms)
-            for channel in member.guild.channels:
-                await channel.set_permissions(verifiedRole, send_messages = True)'''
-
-        #role = discord.utils.get(member.guild.roles, id = 887379146857144461) #Currently a test role, replace id with correct Verified role when added to main server
+            
         await member.add_roles(verifiedRole)
 ###########################################################################
 @bot.event #Sends message and gif on user joining server
@@ -133,13 +127,32 @@ async def on_member_remove(member):
         await channel.send(embed = embed)
     conn.close() #Closes connection to db
 ###########################################################################
+@bot.event #Generic error handling
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        await ctx.send(embed=discord.Embed(title="Command not found! Use `!help` for a list of all commands"))
+    elif isinstance(error, commands.CommandOnCooldown):
+        await ctx.send(embed=discord.Embed(title="You are currently on cooldown!"))
+    elif isinstance(error, commands.BotMissingPermissions):
+        await ctx.send(embed=discord.Embed(title="I do not have permission to do that! Try enabling the proper permissions for me and trying again"))
+    elif isinstance(error, commands.NoPrivateMessage):
+        await ctx.send(embed=discord.Embed(title="This command is only available in servers!"))
+    elif isinstance(error, commands.DisabledCommand):
+        await ctx.send(embed=discord.Embed(title="This command is currently disabled!"))
+    elif isinstance(error, commands.MemberNotFound):
+        await ctx.send(embed=discord.Embed(title="User not found! Make sure to correctly tag them"))
+    elif isinstance(error, commands.NotOwner):
+        await ctx.send(embed=discord.Embed(title="You are not the owner, you cannot use this command"))
+    elif isinstance(error, commands.TooManyArguments):
+        await ctx.send(embed=discord.Embed(title="You provided too many arguments! Check the help menu if you need help"))
+###########################################################################
 @bot.event #If user just types '!'
 async def on_message(message):
     if message.author == bot.user: #Ensures bot doesn't respond to itself
         return
 
     if message.content == "!":
-        await message.channel.send(embed = discord.Embed(title = f"Hello {message.author}! Use `!v help` to learn more about me!"))
+        await message.channel.send(embed = discord.Embed(title = f"Hello {message.author}! Use `!help` to learn more about me!"))
 
     await bot.process_commands(message) #Enables commands
 ###########################################################################
