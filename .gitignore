@@ -1,6 +1,7 @@
 #These things should be local, never in the Github repo
 BotVariables.ini
-
+Test.py
+*.csv
 *.DS_store
 
 Cogs/__pycache__/

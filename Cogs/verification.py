@@ -54,7 +54,7 @@ class Verification(commands.Cog):
             await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !verify **name@wisc.edu** ", color = discord.Color.red()))
 
     @commands.command(name='whois')
-    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Developer', 'Mod', 'Faculty Advisor')
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def whois(self, ctx, tag):
         if('#' not in tag):
             return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
