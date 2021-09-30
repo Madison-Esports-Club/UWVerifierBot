@@ -21,7 +21,6 @@ class Verification(commands.Cog):
         if(discord.utils.get(ctx.author.roles, name = "Verified") != None): # We could have this check the DB, would maybe cause issues with manually verified folks.
             await ctx.send(embed = discord.Embed(title = "You are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
             return
-        #print(ctx.author.id)
         verified, message, color = verify_user(ctx.author.id, email)
         response = "Thank you for submitting your verification request, it will be processed within 24 hours."
 
@@ -43,7 +42,6 @@ class Verification(commands.Cog):
                 role = discord.utils.get(ctx.guild.roles, name = "Verified")
                 await author.add_roles(role)
             except asyncioTimeout: #asyncio.TimeoutError
-                #So this wont work. Once the verify_user method is called on a user_id, it will fail if run again. if it times out, they cannot restart it.
                 return await ctx.send(embed=discord.Embed(title="Connection timed out! Enter the original command to restart", color = discord.Color.orange()))
         else: #Verification errored, or they have a verification record already in the DB, but lost the role
             await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))
@@ -52,7 +50,7 @@ class Verification(commands.Cog):
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !verify **name@wisc.edu** ", color = discord.Color.red()))
-
+###########################################################################
     @commands.command(name='whois')
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def whois(self, ctx, tag):
@@ -86,26 +84,11 @@ class Verification(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !whois UserName#0000", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
+            await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use whois")
         else:
-            print(error)
-
-    '''
-    Example cog function:
-    @commands.command(name="unlock") #The name is what the command used by the user is. You can also do name="unlock", aliases=["un-lock", "unlock1"]) etc to have multiple ways to use the command (always have to be in dict form)
-    @commands.has_permissions(manage_channels=True) #Optional check for permissions
-    async def unlock(self, ctx): #self and ctx always required for cogs (main difference)
-        perms=ctx.channel.overwrites_for(ctx.guild.default_role)
-        perms.send_messages=True
-        await ctx.channel.set_permissions(ctx.guild.default_role, overwrite=perms)
-        await ctx.send(embed=discord.Embed(title=f"**{ctx.channel}** unlocked to non-admin users"))
-
-    @unlock.error #Error handling
-    async def clear_error(self, ctx, error):
-        if isinstance(error,commands.MissingPermissions):
-            await ctx.send(embed=discord.Embed(title="You don't have perms to do that dummy (Requires `Manage Channels` permission)"))
-    '''
-
+            await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Whois error: ",error)
 ###########################################################################
 def insert_verified_user_record(user_id, email, name):
     cursor, conn = dbconnect()
