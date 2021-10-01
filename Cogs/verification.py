@@ -1,4 +1,3 @@
-#Cog for verifying
 import discord
 from discord.ext import commands
 import psycopg2
@@ -29,7 +28,7 @@ class Verification(commands.Cog):
 
         if verified: #Prompts user to enter name to finish verifying
             author = ctx.message.author
-            description = "Please enter your first and last name to finish the process"
+            description = "Please enter your first and last name to finish the verification process."
             await ctx.send(embed = discord.Embed(title = message, description = description, color = discord.Color.teal()))
 
             try:
@@ -123,7 +122,7 @@ def verify_user(user_id, email):
 
     real, message = verify_email(email)
     if(real):
-        return True, f"Congratulations, you are now verified with the email **{email}**!", discord.Color.green()
+        return True, f"Your email **{email}** is valid", discord.Color.green()
 
     if(message == "limit"):
         return False, "Verification daily limit reached, please try again in 24 hours.", discord.Color.red()
