@@ -28,18 +28,23 @@ class Verification(commands.Cog):
 
         if verified: #Prompts user to enter name to finish verifying
             author = ctx.message.author
-            description = "Please enter your first and last name to finish the verification process."
-            await ctx.send(embed = discord.Embed(title = message, description = description, color = discord.Color.teal()))
+            description = f"{ctx.author}, please enter your first and last name to finish the verification process."
+            nameMsg = await ctx.send(embed = discord.Embed(title = message, description = description, color = discord.Color.teal()))
 
             try:
                 response = await self.bot.wait_for("message", check = check, timeout=30)
 
-                message = "You have been successfully verified!"
+                message = f"{ctx.author}, you have been successfully verified!"
                 await ctx.send(embed = discord.Embed(title = message, color = color))
 
                 insert_verified_user_record(author.id, email, response.content)
                 role = discord.utils.get(ctx.guild.roles, name = "Verified")
                 await author.add_roles(role)
+
+                await response.delete() #Deletes all messages except final confirmation
+                await nameMsg.delete()
+                await ctx.message.delete()
+
             except asyncioTimeout: #asyncio.TimeoutError
                 return await ctx.send(embed=discord.Embed(title="Connection timed out! Enter the original command to restart", color = discord.Color.orange()))
         else: #Verification errored, or they have a verification record already in the DB, but lost the role
