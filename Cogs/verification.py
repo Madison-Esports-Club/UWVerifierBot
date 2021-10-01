@@ -20,8 +20,8 @@ class Verification(commands.Cog):
         if(discord.utils.get(ctx.author.roles, name = "Verified") != None): # We could have this check the DB, would maybe cause issues with manually verified folks.
             await ctx.send(embed = discord.Embed(title = "You are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
             return
+
         verified, message, color = verify_user(ctx.author.id, email)
-        response = "Thank you for submitting your verification request, it will be processed within 24 hours."
 
         def check(message): #Makes sure user replying equal to user who started the command
             return message.author.id != self.bot.user.id and message.author.id == ctx.author.id
