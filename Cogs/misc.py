@@ -96,7 +96,7 @@ class Misc(commands.Cog):
         infoDict = {
                 "Created": "September 2021"
                 ,"Language": "Python 3.8.1"
-                #,"Open Source GitHub": "https://github.com/DMLooter/UWVerifierBot"
+                ,"Open Source GitHub": "https://github.com/DMLooter/UWVerifierBot"
                 }
         infoEmbed = discord.Embed(title = "UW Verification Bot Information", color = discord.Color.orange())
         infoEmbed.set_author(name = "Created by DMLooter#4251 & PureCache#0001")
