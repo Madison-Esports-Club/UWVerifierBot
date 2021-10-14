@@ -151,8 +151,8 @@ async def on_message(message):
     if message.author == bot.user: #Ensures bot doesn't respond to itself
         return
 
-    if message.content == "!":
-        await message.channel.send(embed = discord.Embed(title = f"Hello {message.author}! Use `!help` to learn more about me!"))
+    if message.content == "!" or message.content[1] == "!":
+        return
 
     await bot.process_commands(message) #Enables commands
 ###########################################################################
