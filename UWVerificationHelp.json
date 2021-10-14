@@ -31,8 +31,8 @@
 
 
     "changeLog":{
-        "10/11/21": "Fixed issue of messages with just !! triggering help message"
-        "9/30/21": "Initial release"
+        "10/11/21": "Fixed issue of messages with just !! triggering help message\nParenthesis added with email are removed during process"
+        ,"9/30/21": "Initial release"
     },
 
 
