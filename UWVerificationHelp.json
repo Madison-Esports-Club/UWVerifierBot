@@ -31,6 +31,7 @@
 
 
     "changeLog":{
+        "10/11/21": "Fixed issue of messages with just !! triggering help message"
         "9/30/21": "Initial release"
     },
 
