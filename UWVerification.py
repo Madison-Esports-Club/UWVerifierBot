@@ -151,8 +151,11 @@ async def on_message(message):
     if message.author == bot.user: #Ensures bot doesn't respond to itself
         return
 
-    if message.content == "!" or message.content[1] == "!":
-        return
+    if len(message.content) > 1:
+        if message.content[1] == "!":
+                return
+    if message.content == "!":
+        return    
 
     await bot.process_commands(message) #Enables commands
 ###########################################################################
