@@ -27,7 +27,7 @@ class Verification(commands.Cog):
             email = email[1:]
         if (email[-1] == ")"):
             email = email[:-1]
-        
+
         verified, message, color = verify_user(ctx.author.id, email)
 
         def check(message): #Makes sure user replying equal to user who started the command
@@ -103,10 +103,10 @@ class Verification(commands.Cog):
 ###########################################################################
 def insert_verified_user_record(user_id, email, name):
     global time
-    
+
     cursor, conn = dbconnect()
     time = datetime.datetime.utcnow()
-    
+
     cursor.execute("INSERT INTO verified_users (user_id, email, time, full_name) VALUES (%s, %s, TIMESTAMP %s, %s);", [user_id, email, time, name])
     if(cursor.rowcount != 1):
         print(f"failed to insert verification record ({user_id}, {email}, {time})")
@@ -126,7 +126,7 @@ def verify_user(user_id, email):
         success, message, color: a boolean saying if the user was verified, a message to return to the user, and the color of the returned embed.
                 Note that users who are already verified will cause this method to return False.
     """
-    
+
     if(is_verified(user_id)):
         return False, "You have already been verified, please contact a Board Member or Bot Administrator if you need to receive the role again", discord.Color.red()
 
@@ -219,7 +219,8 @@ def verify_email(email):
         real = False
     else:
         print(f"email was unknown: {email}, with response: {response}")
-        return False, "Unknown"
+        real = True
+        #return False, "Unknown"
 
     #save request result
     cursor.execute("INSERT INTO verification_requests(email, time, daily_request_number, result) VALUES (%s, TIMESTAMP %s, %s, %s);", (email, current, number, real))
