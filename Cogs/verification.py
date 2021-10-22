@@ -65,7 +65,7 @@ class Verification(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !verify **name@wisc.edu** ", color = discord.Color.red()))
 ###########################################################################
-    @commands.command(name='whois')
+    @commands.command(name = 'whois')
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def whois(self, ctx, tag):
         if('#' not in tag):
@@ -103,6 +103,64 @@ class Verification(commands.Cog):
         else:
             await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Whois error: ",error)
+###########################################################################
+    @commands.command(name = "manualverify", aliases = ["manual_verify", "manuallyverify"])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def manualverify(self, ctx, user: discord.Member, email, *, full_name):
+        if(discord.utils.get(user.roles, name = "Verified") != None):
+            await ctx.send(embed = discord.Embed(title = f"{user} is already verified!", color = discord.Color.red()))
+            await ctx.message.delete()
+            return
+        
+        verified, message, color = verify_user(user.id, email)
+        if verified:
+            insert_verified_user_record(user.id, email, full_name)
+            role = discord.utils.get(ctx.guild.roles, name = "Verified")
+            await user.add_roles(role)
+
+            await ctx.message.delete() #Deletes all messages except final confirmation
+            message = f"{user} have been successfully verified!"
+            await ctx.send(embed = discord.Embed(title = message, color = color))
+        else: #Verification errored
+            await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))
+
+    @manualverify.error
+    async def clear_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !manualverify @username email@wisc.edu FullName", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use manualverify")
+        else:
+            await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Manualverify error: ",error)
+###########################################################################
+    @commands.command(name = "deleteverification", aliases = ["del_verification", "del_verify", "deleteverify", "delverify"])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def del_verify(self, ctx, user: discord.Member):
+        try:
+            cursor, conn = dbconnect()
+            cursor.execute("DELETE FROM verified_users WHERE user_id = %s;", (user.id,))
+            conn.commit()
+            conn.close()
+            
+            if (cursor.rowcount != 1): #Did not delete (record not found)
+                await ctx.send(embed = discord.Embed(title = "Record not found", color = discord.Color.red()))
+            else: #Deleted
+                await ctx.send(embed = discord.Embed(title = "Deleted verification record", color = discord.Color.green()))
+        except Exception as error:
+            await ctx.send(embed = discord.Embed(title = "Error:", description = error, color = discord.Color.red()))    
+    
+    @del_verify.error
+    async def clear_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !del_verify @username", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use del_verify")
+        else:
+            await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Del_verify error: ",error)
 ###########################################################################
 def insert_verified_user_record(user_id, email, name):
     global time
