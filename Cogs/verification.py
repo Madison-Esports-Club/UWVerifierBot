@@ -102,17 +102,17 @@ class Verification(commands.Cog):
             await ctx.message.delete()
             return
 
-        verified, message, color = verify_user(user.id, email)
-        if verified:
-            insert_verified_user_record(user.id, email, full_name)
-            role = discord.utils.get(ctx.guild.roles, name = "Verified")
-            await user.add_roles(role)
+        """verified, message, color = verify_user(user.id, email)
+        if verified:"""
+        insert_verified_user_record(user.id, email, full_name)
+        role = discord.utils.get(ctx.guild.roles, name = "Verified")
+        await user.add_roles(role)
 
-            await ctx.message.delete() #Deletes all messages except final confirmation
-            message = f"{user} have been successfully verified!"
-            await ctx.send(embed = discord.Embed(title = message, color = color))
-        else: #Verification errored
-            await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))
+        await ctx.message.delete() #Deletes all messages except final confirmation
+        message = f"{user} has been successfully verified!"
+        await ctx.send(embed = discord.Embed(title = message, color = green))
+        """else: #Verification errored
+            await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))"""
 
     @manualverify.error
     async def clear_error(self, ctx, error):
