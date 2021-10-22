@@ -209,40 +209,54 @@ def verify_email(email):
     if(number > 99):
         print("HIT DAILY REQUEST LIMIT")
         return False, "limit"
-    
+
     '''#run request
     response = requests.get("https://isitarealemail.com/api/email/validate",
     params = {'email': email})
 
-    status = response.json()['status']
-    real = False'''
+    status = response.json()['status']'''
 
-    #Pull domain name from email address
-    domain_name = email.split('@')[1]
+    real = False
 
-    #get the MX record for the domain
-    records = dns.resolver.query(domain_name, 'MX')
-    mxRecord = records[0].exchange
-    mxRecord = str(mxRecord)
+    try:
+        #get the MX record for wisc.edu
+        #Not strictly needed to do this everytime, but it could change and leave us in the lurch so for now its fine
+        records = dns.resolver.query('wisc.edu', 'MX')
+        mxRecord = str(records[0].exchange)
 
-    #Get local server hostname
-    host = socket.gethostname()
+        #Get local server hostname
+        host = socket.gethostname()
 
-    #SMTP lib setup
-    server = smtplib.SMTP()
-    server.set_debuglevel(0)
+        #SMTP lib setup
+        server = smtplib.SMTP()
+        server.set_debuglevel(0)
 
-    #SMTP Conversation
-    server.connect(mxRecord)
-    server.helo(host)
-    server.mail('me@domain.com')
-    code, message = server.rcpt(str(email))
-    server.quit()
+        #SMTP Conversation
+        code, message = server.connect(mxRecord)
+        print(f"connect response: {code} - {message}")
 
-    if code == 250: #Valid email
-        real = True
-    else:
-        real = False
+        server.helo(host)
+        print(f"HELO response: {server.helo_resp}")
+
+        code, message = server.mail('madisonesportsclub@hotmail.com')
+        print(f"mail response: {code} - {message}")
+
+        code, message = server.rcpt(str(email))
+        print(f"rcpt response: {code} - {message}")
+
+        server.quit()
+
+        if code == 250: #Valid email
+            real = True
+    except dns.exception.DNSException as e:
+        print(f"DNS Error: {e}")
+        return False, "Unknown" # dont want to insert a cache record if it just failed
+    except socket.error as e:
+        print(f"Failed to connect to SMTP server: {e}")
+        return False, "Unknown" # dont want to insert a cache record if it just failed
+    except:
+        print("******** Uncaught Error **********")
+        return False, "Unknown" # dont want to insert a cache record if it just failed
 
     '''if status == "valid":
         real = True
