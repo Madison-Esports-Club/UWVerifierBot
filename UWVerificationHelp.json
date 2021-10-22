@@ -33,7 +33,7 @@
 
 
     "changeLog":{
-        "10/22/21": "Added manual commands for admin users"
+        "10/22/21": "Added manual commands for admin users, all commands now use (@Tag) instead of (Tag#0000)"
         ,"10/11/21": "Fixed issue of messages with just !! triggering help message\nParenthesis added with email are removed during process"
         ,"9/30/21": "Initial release"
     },

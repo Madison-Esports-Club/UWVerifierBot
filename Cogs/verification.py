@@ -67,21 +67,11 @@ class Verification(commands.Cog):
 ###########################################################################
     @commands.command(name = 'whois')
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def whois(self, ctx, tag):
-        if('#' not in tag):
-            return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
-
-        parts = tag.split('#', 1)
-        name_part = parts[0]
-        discriminator_part = parts[1]
-
-        member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
-        if member is None:
-            return await ctx.send(embed = discord.Embed(title = "Unkown user", description = f"Could not find {tag} in this server", color = discord.Color.red()))
+    async def whois(self, ctx, member: discord.Member):
 
         email, name, time = get_verification_record(member.id)
         if(email is None):
-            return await ctx.send(embed = discord.Embed(title = "Not Verified", description = f"{tag} is not verified.", color = discord.Color.orange()))
+            return await ctx.send(embed = discord.Embed(title = "Not Verified", description = f"{member} is not verified.", color = discord.Color.orange()))
 
         if(name is None):
             name = "*No name registered*"
@@ -102,7 +92,7 @@ class Verification(commands.Cog):
             print(f"non-admin {ctx.message.author} tried to use whois")
         else:
             await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
-            print("Whois error: ",error)
+            print("Whois error: ", error)
 ###########################################################################
     @commands.command(name = "manualverify", aliases = ["manual_verify", "manuallyverify"])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
@@ -111,7 +101,7 @@ class Verification(commands.Cog):
             await ctx.send(embed = discord.Embed(title = f"{user} is already verified!", color = discord.Color.red()))
             await ctx.message.delete()
             return
-        
+
         verified, message, color = verify_user(user.id, email)
         if verified:
             insert_verified_user_record(user.id, email, full_name)
@@ -135,7 +125,7 @@ class Verification(commands.Cog):
             await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Manualverify error: ",error)
 ###########################################################################
-    @commands.command(name = "deleteverification", aliases = ["del_verification", "del_verify", "deleteverify", "delverify"])
+    @commands.command(name = "deleteverification", aliases = ["del_verification", "del_verify", "deleteverify", "delverify", "unverify"])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def del_verify(self, ctx, user: discord.Member):
         try:
@@ -143,14 +133,14 @@ class Verification(commands.Cog):
             cursor.execute("DELETE FROM verified_users WHERE user_id = %s;", (user.id,))
             conn.commit()
             conn.close()
-            
+
             if (cursor.rowcount != 1): #Did not delete (record not found)
                 await ctx.send(embed = discord.Embed(title = "Record not found", color = discord.Color.red()))
             else: #Deleted
                 await ctx.send(embed = discord.Embed(title = "Deleted verification record", color = discord.Color.green()))
         except Exception as error:
-            await ctx.send(embed = discord.Embed(title = "Error:", description = error, color = discord.Color.red()))    
-    
+            await ctx.send(embed = discord.Embed(title = "Error:", description = error, color = discord.Color.red()))
+
     @del_verify.error
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
