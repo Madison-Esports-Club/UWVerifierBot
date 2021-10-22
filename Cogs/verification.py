@@ -5,6 +5,9 @@ import datetime
 import requests
 from asyncio import TimeoutError as asyncioTimeout
 from pytz import timezone
+import smtplib
+import dns.resolver
+import socket
 
 from Cogs.db import dbconnect
 
@@ -206,21 +209,49 @@ def verify_email(email):
     if(number > 99):
         print("HIT DAILY REQUEST LIMIT")
         return False, "limit"
-
-    #run request
+    
+    '''#run request
     response = requests.get("https://isitarealemail.com/api/email/validate",
     params = {'email': email})
 
     status = response.json()['status']
-    real = False
-    if status == "valid":
+    real = False'''
+
+    #Pull domain name from email address
+    domain_name = email.split('@')[1]
+
+    #get the MX record for the domain
+    records = dns.resolver.query(domain_name, 'MX')
+    mxRecord = records[0].exchange
+    mxRecord = str(mxRecord)
+
+    #Get local server hostname
+    host = socket.gethostname()
+
+    #SMTP lib setup
+    server = smtplib.SMTP()
+    server.set_debuglevel(0)
+
+    #SMTP Conversation
+    server.connect(mxRecord)
+    server.helo(host)
+    server.mail('me@domain.com')
+    code, message = server.rcpt(str(email))
+    server.quit()
+
+    if code == 250: #Valid email
+        real = True
+    else:
+        real = False
+
+    '''if status == "valid":
         real = True
     elif status == "invalid":
         real = False
     else:
         print(f"email was unknown: {email}, with response: {response}")
         real = True
-        #return False, "Unknown"
+        #return False, "Unknown"'''
 
     #save request result
     cursor.execute("INSERT INTO verification_requests(email, time, daily_request_number, result) VALUES (%s, TIMESTAMP %s, %s, %s);", (email, current, number, real))
