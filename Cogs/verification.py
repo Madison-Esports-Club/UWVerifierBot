@@ -110,7 +110,7 @@ class Verification(commands.Cog):
 
         await ctx.message.delete() #Deletes all messages except final confirmation
         message = f"{user} has been successfully verified!"
-        await ctx.send(embed = discord.Embed(title = message, color = green))
+        await ctx.send(embed = discord.Embed(title = message, color = discord.Color.green()))
         """else: #Verification errored
             await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))"""
 
