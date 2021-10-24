@@ -67,20 +67,30 @@ class Verification(commands.Cog):
 ###########################################################################
     @commands.command(name = 'whois')
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def whois(self, ctx, member: discord.Member):
+    async def whois(self, ctx, user):
+        if('#' not in user):
+            return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
 
+        parts = user.split('#', 1)
+        name_part = parts[0]
+        discriminator_part = parts[1]
+
+        member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
+        if member is None:
+            return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
+        
         email, name, time = get_verification_record(member.id)
         if(email is None):
-            return await ctx.send(embed = discord.Embed(title = "Not Verified", description = f"{member} is not verified.", color = discord.Color.orange()))
+            return await ctx.send(embed = discord.Embed(title = "Not Verified", description = f"{user} is not verified.", color = discord.Color.orange()))
 
         if(name is None):
             name = "*No name registered*"
         time = time.astimezone(timezone("America/Chicago"))
         timestamp = time.strftime("%m/%d/%Y, %I:%M %p %Z")
         recordEmbed = discord.Embed(title = "Verification Record", color = discord.Color.green())
-        recordEmbed.add_field(name=("*Name*"),value = name,inline=False)
-        recordEmbed.add_field(name=("*Email*"),value = email,inline=False)
-        recordEmbed.add_field(name=("*Time Verified*"),value = timestamp,inline=False)
+        recordEmbed.add_field(name = ("*Name*"), value = name, inline=False)
+        recordEmbed.add_field(name = ("*Email*"), value = email, inline=False)
+        recordEmbed.add_field(name = ("*Time Verified*"), value = timestamp, inline=False)
         return await ctx.send(embed = recordEmbed)
 
     @whois.error
@@ -96,17 +106,28 @@ class Verification(commands.Cog):
 ###########################################################################
     @commands.command(name = "manualverify", aliases = ["manual_verify", "manuallyverify"])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def manualverify(self, ctx, user: discord.Member, email, *, full_name):
-        if(discord.utils.get(user.roles, name = "Verified") != None):
-            await ctx.send(embed = discord.Embed(title = f"{user} is already verified!", color = discord.Color.red()))
-            await ctx.message.delete()
-            return
+    async def manualverify(self, ctx, user, email, *, full_name):
+        if('#' not in user):
+            return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
 
+        parts = user.split('#', 1)
+        name_part = parts[0]
+        discriminator_part = parts[1]
+
+        member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
+        if member is None:
+            return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
+        
+        if(discord.utils.get(member.roles, name = "Verified") != None):
+            await ctx.send(embed = discord.Embed(title = f"{user} is already verified!", color = discord.Color.red()))
+            return await ctx.message.delete()
+            
+        
         """verified, message, color = verify_user(user.id, email)
         if verified:"""
-        insert_verified_user_record(user.id, email, full_name)
+        insert_verified_user_record(member.id, email, full_name)
         role = discord.utils.get(ctx.guild.roles, name = "Verified")
-        await user.add_roles(role)
+        await member.add_roles(role)
 
         await ctx.message.delete() #Deletes all messages except final confirmation
         message = f"{user} has been successfully verified!"
@@ -117,7 +138,7 @@ class Verification(commands.Cog):
     @manualverify.error
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !manualverify @username email@wisc.edu FullName", color = discord.Color.red()))
+            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !manualverify UserName#0000 email@wisc.edu FullName", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
             await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use manualverify")
@@ -127,24 +148,39 @@ class Verification(commands.Cog):
 ###########################################################################
     @commands.command(name = "deleteverification", aliases = ["del_verification", "del_verify", "deleteverify", "delverify", "unverify"])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def del_verify(self, ctx, user: discord.Member):
+    async def del_verify(self, ctx, user):
+        if('#' not in user):
+            return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
+
+        parts = user.split('#', 1)
+        name_part = parts[0]
+        discriminator_part = parts[1]
+
+        member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
+        if member is None:
+            return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
+        
         try:
             cursor, conn = dbconnect()
-            cursor.execute("DELETE FROM verified_users WHERE user_id = %s;", (user.id,))
+            cursor.execute("DELETE FROM verified_users WHERE user_id = %s;", (member.id,))
             conn.commit()
             conn.close()
 
             if (cursor.rowcount != 1): #Did not delete (record not found)
                 await ctx.send(embed = discord.Embed(title = "Record not found", color = discord.Color.red()))
             else: #Deleted
-                await ctx.send(embed = discord.Embed(title = "Deleted verification record", color = discord.Color.green()))
+                role = discord.utils.get(ctx.guild.roles, name = "Verified")
+                if role in member.roles:
+                    await member.remove_roles(role)
+
+                await ctx.send(embed = discord.Embed(title = "Deleted verification record & removed Verified role", color = discord.Color.green()))
         except Exception as error:
             await ctx.send(embed = discord.Embed(title = "Error:", description = error, color = discord.Color.red()))
 
     @del_verify.error
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !del_verify @username", color = discord.Color.red()))
+            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !del_verify UserName#0000", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
             await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use del_verify")
