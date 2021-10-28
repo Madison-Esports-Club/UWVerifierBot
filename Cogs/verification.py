@@ -78,7 +78,7 @@ class Verification(commands.Cog):
         member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
         if member is None:
             return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
-        
+
         email, name, time = get_verification_record(member.id)
         if(email is None):
             return await ctx.send(embed = discord.Embed(title = "Not Verified", description = f"{user} is not verified.", color = discord.Color.orange()))
@@ -117,12 +117,12 @@ class Verification(commands.Cog):
         member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
         if member is None:
             return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
-        
+
         if(discord.utils.get(member.roles, name = "Verified") != None):
             await ctx.send(embed = discord.Embed(title = f"{user} is already verified!", color = discord.Color.red()))
             return await ctx.message.delete()
-            
-        
+
+
         """verified, message, color = verify_user(user.id, email)
         if verified:"""
         insert_verified_user_record(member.id, email, full_name)
@@ -159,7 +159,7 @@ class Verification(commands.Cog):
         member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
         if member is None:
             return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
-        
+
         try:
             cursor, conn = dbconnect()
             cursor.execute("DELETE FROM verified_users WHERE user_id = %s;", (member.id,))
@@ -334,13 +334,13 @@ def verify_email(email):
             real = True
     except dns.exception.DNSException as e:
         print(f"DNS Error: {e}")
-        return False, "Unknown" # dont want to insert a cache record if it just failed
+        return True, "Unknown" # dont want to insert a cache record if it just failed
     except socket.error as e:
         print(f"Failed to connect to SMTP server: {e}")
-        return False, "Unknown" # dont want to insert a cache record if it just failed
+        return True, "Unknown" # dont want to insert a cache record if it just failed
     except:
         print("******** Uncaught Error **********")
-        return False, "Unknown" # dont want to insert a cache record if it just failed
+        return True, "Unknown" # dont want to insert a cache record if it just failed
 
     '''if status == "valid":
         real = True
