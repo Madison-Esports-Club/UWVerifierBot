@@ -5,6 +5,9 @@
         ,
         "Misc":
             "`help`, `changelog`, `ping`"
+        ,
+        "Events":
+            "`createevent`"
     },
 
     "full": {
@@ -45,5 +48,6 @@
         ,"db": ""
         ,"misc": ""
         ,"settings": ""
+        ,"events": ""
     }
 }
