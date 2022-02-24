@@ -25,6 +25,7 @@ class Events(commands.Cog):
 
         event = await ctx.guild.create_scheduled_event(
             name = name,
+            entity_type = entity_type,
             channel_id = channel.id if channel else None,
             scheduled_start_time = datetime.datetime.utcnow()+datetime.timedelta(days=1),
             scheduled_end_time = datetime.datetime.utcnow()+datetime.timedelta(days=2),
@@ -33,11 +34,11 @@ class Events(commands.Cog):
         )
         logEmbed.add_field(name=("*Name*"),value = event.name, inline=False)
         logEmbed.add_field(name=("*Description*"),value = event.description, inline=False)
-        logEmbed.add_field(name=("*Location*"),value = event.entity_metatdata.location if event.entity_type == 3 else event.channel_id, inline=False)
+        logEmbed.add_field(name=("*Location*"),value = event.location if event.entity_type.value == 3 else f'VC: {channel.name}', inline=False)
         logEmbed.add_field(name=("*Starts*"),value = event.scheduled_start_time.isoformat(), inline=False)
 
         await ctx.send(embed = logEmbed)
-    
+
     @createevent.error
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
