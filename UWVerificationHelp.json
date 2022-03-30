@@ -15,7 +15,7 @@
             "!verify email@wisc.edu": "Starts verification process to access server features, must have valid @wisc.edu email (i.e: !verify jSmith@wisc.edu)"
             ,"!whois UserName#0000": "Returns the email address and name of the specified verified discord user. Only accessible to Board Members, Game Officers, and Mods"
             ,"!manualverify UserName#0000 email@wisc.edu full_name": "Manually verifies the user with the information provided. Only accessible to Board Members, Game Officers, and Mods"
-            ,"!del_verify UserName#0000": "Manually deletes a user's verification record. Only accessible to Board Members, Game Officers, and Mods"
+            ,"!del_verify UserName#0000 (or) !del_verify email@wisc.edu" : "Manually deletes a user's verification record. Only accessible to Board Members, Game Officers, and Mods"
         },
         "misc":{
             "!help": "Displays help menu"
@@ -36,7 +36,8 @@
 
 
     "changeLog":{
-        "10/23/21": "Switched back to using Tag#0000 for commands, unverify role now removes role as well"
+        "3/29/22": "Added alternative use of email as an argument for delete verification command"
+        ,"10/23/21": "Switched back to using Tag#0000 for commands, unverify role now removes role as well"
         ,"10/22/21": "Added manual commands for admin users, all commands now use (@Tag) instead of (Tag#0000)"
         ,"10/11/21": "Fixed issue of messages with just !! triggering help message\nParenthesis added with email are removed during process"
         ,"9/30/21": "Initial release"
