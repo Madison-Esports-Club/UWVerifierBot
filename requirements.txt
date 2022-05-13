@@ -1,5 +1,5 @@
-git+https://github.com/DMLooter/discord.py.git
 psycopg2
+discord
 requests
 pytz
 dnspython
