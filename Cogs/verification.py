@@ -174,7 +174,7 @@ class Verification(commands.Cog):
                 cursor.execute("DELETE FROM verified_users WHERE email LIKE %s;", (email,))
             conn.commit()
             conn.close()
-            
+
             if (cursor.rowcount != 1): #Did not delete (record not found)
                 await ctx.send(embed = discord.Embed(title = "Record not found", color = discord.Color.red()))
             else: #Deleted
@@ -304,25 +304,27 @@ def verify_email(email):
         print("HIT DAILY REQUEST LIMIT")
         return False, "limit"
 
-    '''#run request
-    response = requests.get("https://isitarealemail.com/api/email/validate",
-    params = {'email': email})
-
-    status = response.json()['status']'''
-
     real = False
 
     try:
+        print("pinging UW")
         #get the MX record for wisc.edu
         #Not strictly needed to do this everytime, but it could change and leave us in the lurch so for now its fine
-        records = dns.resolver.query('wisc.edu', 'MX')
+        records = dns.resolver.resolve('wisc.edu', 'MX')
+        lowpref = records[0].preference
         mxRecord = str(records[0].exchange)
+        for record in records:
+            if record.preference < lowpref:
+                lowpref = record.preference
+                mxRecord = str(record.exchange)
+
+        print("Got record: " + mxRecord)
 
         #Get local server hostname
         host = socket.gethostname()
 
         #SMTP lib setup
-        server = smtplib.SMTP()
+        server = smtplib.SMTP(timeout = 2)
         server.set_debuglevel(0)
 
         #SMTP Conversation
@@ -352,15 +354,6 @@ def verify_email(email):
         print("******** Uncaught Error **********")
         return True, "Unknown" # dont want to insert a cache record if it just failed
 
-    '''if status == "valid":
-        real = True
-    elif status == "invalid":
-        real = False
-    else:
-        print(f"email was unknown: {email}, with response: {response}")
-        real = True
-        #return False, "Unknown"'''
-
     #save request result
     cursor.execute("INSERT INTO verification_requests(email, time, daily_request_number, result) VALUES (%s, TIMESTAMP %s, %s, %s);", (email, current, number, real))
     if(cursor.rowcount != 1):
@@ -380,4 +373,3 @@ def insert_name(full_name, user_id):
 ###########################################################################
 def setup(bot):
     bot.add_cog(Verification(bot))
-
