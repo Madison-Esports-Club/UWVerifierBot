@@ -1,5 +1,5 @@
 psycopg2
-pycord
+discord
 requests
 pytz
 dnspython
