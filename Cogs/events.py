@@ -48,7 +48,8 @@ class Events(commands.Cog):
             print(f"non-admin {ctx.message.author} tried to use createevent")
         else:
             await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
-            raise Exception("Create Event error: ", error)
+            print("Create Event error: ", error)
+            raise error
 ###########################################################################
     @commands.command(name = "schedule_stream")
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
@@ -77,13 +78,13 @@ class Events(commands.Cog):
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !schedule_stream \"<game>\" \"<twitch_channel>\" \"<time>\"", color = discord.Color.red()))
-            raise Exception("Test error ", error) #TODO remove
         elif isinstance(error, commands.MissingAnyRole):
             await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use schedule_stream")
         else:
             await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
-            raise Exception("Schedule Stream error: ", error)
+            print("Schedule Stream error: ", error)
+            raise error
 ###########################################################################
 def setup(bot):
     bot.add_cog(Events(bot))
