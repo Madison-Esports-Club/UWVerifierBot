@@ -357,7 +357,7 @@ def verify_email(email):
     #save request result
     cursor.execute("INSERT INTO verification_requests(email, time, daily_request_number, result) VALUES (%s, TIMESTAMP %s, %s, %s);", (email, current, number, real))
     if(cursor.rowcount != 1):
-        print(f"failed to insert verification request ({email}, {time}, {number}, {real})")
+        print(f"failed to insert verification request ({email}, {current}, {number}, {real})")
     conn.commit()
     conn.close()
     return real, "from server"
