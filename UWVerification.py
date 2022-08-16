@@ -17,20 +17,7 @@ bot.remove_command("help") #Removes discord built-in help command
 ###########################################################################
 @bot.event #Loads all cogs and initiates bot
 async def on_ready():
-    with open("UWVerificationHelp.json","r") as cogFile:
-        data = json.load(cogFile)
-    data = data["Cogs"]
-    cogList = list(data.keys())
-
-    for cog in cogList:
-        cog = ("Cogs." + cog)
-        try: #Loads each cog
-            bot.load_extension(cog)
-            print ("Loaded", cog)
-        except Exception as e: #If cog can't be loaded, will error to console
-            print ("Error loading", cog, "e:", e)
-
-    randNum= random.randint(1, 2) #Bot status
+    randNum = random.randint(1, 2) #Bot status
     if randNum==1:
         await bot.change_presence(activity = discord.Activity(type = discord.ActivityType.watching, name = "Madison Gaming & Esports"))
     else:
@@ -45,7 +32,7 @@ async def on_member_join(member):
         if(verifiedRole is None):
             print(f"no verified role in server: {member.guild}")
             return
-            
+
         await member.add_roles(verifiedRole)
 ###########################################################################
 @bot.event #Sends message and gif on user joining server
@@ -155,10 +142,27 @@ async def on_message(message):
         if message.content[1] == "!":
                 return
     if message.content == "!":
-        return    
+        return
 
     await bot.process_commands(message) #Enables commands
 ###########################################################################
+def load_cogs():
+    with open("UWVerificationHelp.json","r") as cogFile:
+        data = json.load(cogFile)
+    data = data["Cogs"]
+    cogList = list(data.keys())
+
+    for cog in cogList:
+        cog = ("Cogs." + cog)
+        try: #Loads each cog
+            bot.load_extension(cog)
+            print ("Loaded", cog)
+        except Exception as e: #If cog can't be loaded, will error to console
+            print ("Error loading", cog, "e:", e)
+###########################################################################
+
+load_cogs()
+
 try: #Config var in Heroku
     bot.run(os.environ["DISCORD_TOKEN"])
 except: #Runs from system
