@@ -23,7 +23,7 @@ async def on_ready():
     else:
         await bot.change_presence(activity = discord.Game("video games with Badgers"))
 
-    print (bot.user.name, "successfully connected to Discord")
+    print(bot.user.name, "successfully connected to Discord")
 ###########################################################################
 @bot.event #Gives Verified role to user if they are in the db already
 async def on_member_join(member):

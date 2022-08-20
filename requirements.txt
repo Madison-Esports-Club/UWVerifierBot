@@ -3,3 +3,4 @@ py-cord
 requests
 pytz
 dnspython
+httpx
