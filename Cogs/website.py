@@ -65,6 +65,16 @@ class Website(commands.Cog):
     async def changeinhouse(self, ctx):
         await ctx.respond("Select the new Inhouse time and date", view=InhouseView())
 ###########################################################################
+DayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+DayOptions = []
+for label in DayOfWeek:
+    DayOptions.append(discord.SelectOption(label=label))
+
+TimeLabels = ["8:00am", "9:00am","10:00am","11:00am","12:00pm","1:00pm","2:00pm","3:00pm","4:00pm","5:00pm","6:00pm","7:00pm","8:00pm","9:00pm","10:00pm"]
+TimeOptions = []
+for label in TimeLabels:
+    TimeOptions.append(discord.SelectOption(label=label))
+
 class InhouseView(discord.ui.View):
     def __init__(self):
         super().__init__()
@@ -119,29 +129,7 @@ class InhouseView(discord.ui.View):
         placeholder = "Choose a Day of the Week", # the placeholder text that will be displayed if nothing is selected
         min_values = 1, # the minimum number of values that must be selected by the users
         max_values = 1, # the maxmimum number of values that can be selected by the users
-        options = [ # the list of options from which users can choose, a required field
-            discord.SelectOption(
-                label="Sunday"
-            ),
-            discord.SelectOption(
-                label="Monday"
-            ),
-            discord.SelectOption(
-                label="Tuesday"
-            ),
-            discord.SelectOption(
-                label="Wednesday"
-            ),
-            discord.SelectOption(
-                label="Thursday"
-            ),
-            discord.SelectOption(
-                label="Friday"
-            ),
-            discord.SelectOption(
-                label="Saturday"
-            )
-        ]
+        options = DayOptions
     )
     async def day_select_callback(self, select, interaction): # the function called when the user is done selecting options
         self.day = DayOfWeek.index(select.values[0])
@@ -152,53 +140,7 @@ class InhouseView(discord.ui.View):
         placeholder = "Choose a Time of Day", # the placeholder text that will be displayed if nothing is selected
         min_values = 1, # the minimum number of values that must be selected by the users
         max_values = 1, # the maxmimum number of values that can be selected by the users
-        options = [ # the list of options from which users can choose, a required field
-            discord.SelectOption(
-                label="8:00am"
-            ),
-            discord.SelectOption(
-                label="9:00am"
-            ),
-            discord.SelectOption(
-                label="10:00am"
-            ),
-            discord.SelectOption(
-                label="11:00am"
-            ),
-            discord.SelectOption(
-                label="12:00pm"
-            ),
-            discord.SelectOption(
-                label="1:00pm"
-            ),
-            discord.SelectOption(
-                label="2:00pm"
-            ),
-            discord.SelectOption(
-                label="3:00pm"
-            ),
-            discord.SelectOption(
-                label="4:00pm"
-            ),
-            discord.SelectOption(
-                label="5:00pm"
-            ),
-            discord.SelectOption(
-                label="6:00pm"
-            ),
-            discord.SelectOption(
-                label="7:00pm"
-            ),
-            discord.SelectOption(
-                label="8:00pm"
-            ),
-            discord.SelectOption(
-                label="9:00pm"
-            ),
-            discord.SelectOption(
-                label="10:00pm"
-            )
-        ]
+        options = TimeOptions
     )
     async def time_select_callback(self, select, interaction): # the function called when the user is done selecting options
         self.time = select.values[0]
@@ -252,7 +194,6 @@ async def sendPost(endpoint, json):
             return resp.status_code
         return resp.status_code
 ###########################################################################
-DayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
 LoLNames = ["lol", "league", "league of legends"]
 ValorantNames = ["valorant","val"]
