@@ -11,7 +11,7 @@ class Website(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
     ###########################################################################
-    @discord.slash_command(description = "Creates a new event on the website calendar.", guild_ids = [887366492730036276])
+    @discord.slash_command(description = "Creates a new event on the website calendar.")
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def createevent(self, ctx, name:discord.Option(str), location:discord.Option(str), game:discord.Option(str), date:discord.Option(str), time:discord.Option(str), ampm:discord.Option(str)):
         await ctx.defer()
@@ -60,7 +60,7 @@ class Website(commands.Cog):
             print("Create Event error: ", error)
             raise error
     ###########################################################################
-    @discord.slash_command(description = "Changes the Inhouse Schedule for a game", guild_ids = [887366492730036276])
+    @discord.slash_command(description = "Changes the Inhouse Schedule for a game")
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def changeinhouse(self, ctx):
         await ctx.respond("Select the new Inhouse time and date", view=InhouseView())
