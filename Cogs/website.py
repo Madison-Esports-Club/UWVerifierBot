@@ -178,15 +178,17 @@ class InhouseView(discord.ui.View):
 async def sendPost(endpoint, json):
     try: #Config var in Heroku
         headertext = f'apikey {os.environ["APIKEY"]}&name {os.environ["BOT_NAME"]}'
+        host = os.environ["WEBSITE_IP"]
     except: #Runs from system
         config_object = ConfigParser()
         config_object.read("BotVariables.ini")
         variables = config_object["variables"]
         headertext = f'apikey {variables["APIKEY"]}&name {variables["BOT_NAME"]}'
+        host = variables["WEBSITE_IP"]
 
     headers = {"Authorization" : headertext}
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(f'https://madisonesports.club/api/{endpoint}', json = json, headers = headers)
+    async with httpx.AsyncClient(verify = False) as client:
+        resp = await client.post(f'https://{host}/api/{endpoint}', json = json, headers = headers)
         print(resp)
         try:
             print(resp.json())
