@@ -187,7 +187,7 @@ async def sendPost(endpoint, json):
         host = variables["WEBSITE_IP"]
 
     headers = {"Authorization" : headertext}
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify = False) as client:
         resp = await client.post(f'https://{host}/api/{endpoint}', json = json, headers = headers)
         print(resp)
         try:
