@@ -12,7 +12,7 @@
 
     "full": {
         "verification":{
-            "!verify email@wisc.edu": "Starts verification process to access server features, must have valid @wisc.edu email (i.e: !verify jSmith@wisc.edu)"
+            "/verify email@wisc.edu firstName lastName": "Starts verification process to access server features, must have valid @wisc.edu email (i.e: /verify jSmith@wisc.edu John Smith)"
             ,"!whois UserName#0000": "Returns the email address and name of the specified verified discord user. Only accessible to Board Members, Game Officers, and Mods"
             ,"!manualverify UserName#0000 email@wisc.edu full_name": "Manually verifies the user with the information provided. Only accessible to Board Members, Game Officers, and Mods"
             ,"!del_verify UserName#0000 (or) !del_verify email@wisc.edu" : "Manually deletes a user's verification record. Only accessible to Board Members, Game Officers, and Mods"
