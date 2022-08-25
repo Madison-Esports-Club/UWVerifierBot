@@ -18,52 +18,33 @@ class Verification(commands.Cog):
     def __init__(self, bot):
         self.bot=bot
 ###########################################################################
-    @commands.command(name='verify')
-    async def verify(self, ctx, email):
+    @discord.slash_command(name='verify', description="Verifies a user for access to locked channels")
+    async def verify(self, ctx, email, firstname, lastname):
         if(discord.utils.get(ctx.author.roles, name = "Verified") != None): # We could have this check the DB, would maybe cause issues with manually verified folks.
-            await ctx.send(embed = discord.Embed(title = "You are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
-            await ctx.message.delete()
+            await ctx.respond(embed = discord.Embed(title = "You are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
             return
-
-        #Check if email has starting/ending parenthesis
-        if (email[0] == "("):
-            email = email[1:]
-        if (email[-1] == ")"):
-            email = email[:-1]
+        
+        #Trims parameters
+        email = email.strip()
+        firstname = firstname.strip()
+        lastname = lastname.strip()
 
         verified, message, color = verify_user(ctx.author.id, email)
 
-        def check(message): #Makes sure user replying equal to user who started the command
-            return message.author.id != self.bot.user.id and message.author.id == ctx.author.id
-
         if verified: #Prompts user to enter name to finish verifying
-            author = ctx.message.author
-            description = f"{ctx.author}, please enter your first and last name to finish the verification process."
-            nameMsg = await ctx.send(embed = discord.Embed(title = message, description = description, color = discord.Color.teal()))
+            author = ctx.author
 
-            try:
-                response = await self.bot.wait_for("message", check = check, timeout=30)
+            insert_verified_user_record(author.id, email, firstname + " " + lastname)
+            role = discord.utils.get(ctx.guild.roles, name = "Verified")
+            await author.add_roles(role)
+            await ctx.respond(embed = discord.Embed(title = f"{ctx.author}, you have been successfully verified!", color = color))
 
-                message = f"{ctx.author}, you have been successfully verified!"
-                await ctx.send(embed = discord.Embed(title = message, color = color))
-
-                insert_verified_user_record(author.id, email, response.content)
-                role = discord.utils.get(ctx.guild.roles, name = "Verified")
-                await author.add_roles(role)
-
-                await response.delete() #Deletes all messages except final confirmation
-                await nameMsg.delete()
-                await ctx.message.delete()
-
-            except asyncioTimeout: #asyncio.TimeoutError
-                return await ctx.send(embed=discord.Embed(title="Connection timed out! Enter the original command to restart", color = discord.Color.orange()))
         else: #Verification errored, or they have a verification record already in the DB, but lost the role
-            await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))
+            await ctx.respond(embed = discord.Embed(title = "Error", description = message, color = color))
 
     @verify.error
     async def clear_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !verify **name@wisc.edu** ", color = discord.Color.red()))
+        await ctx.respond(embed = discord.Embed(title = "An error occured, please ping a Bot Technician", description = error, color = discord.Color.red()))
 ###########################################################################
     @commands.command(name = 'whois')
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
