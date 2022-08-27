@@ -19,24 +19,25 @@ class Verification(commands.Cog):
         self.bot=bot
 ###########################################################################
     @discord.slash_command(name='verify', description="Verifies a user for access to locked channels")
-    async def verify(self, ctx, email, firstname, lastname):
+    async def verify(self, ctx, email, fullname):
         if(discord.utils.get(ctx.author.roles, name = "Verified") != None): # We could have this check the DB, would maybe cause issues with manually verified folks.
             await ctx.respond(embed = discord.Embed(title = "You are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
             return
         
+        await ctx.defer()
+
         #Trims parameters
         email = email.strip()
-        firstname = firstname.strip()
-        lastname = lastname.strip()
+        fullname = fullname.strip()
 
         verified, message, color = verify_user(ctx.author.id, email)
 
         if verified: #Prompts user to enter name to finish verifying
-            author = ctx.author
+            #author = ctx.author
 
-            insert_verified_user_record(author.id, email, firstname + " " + lastname)
+            insert_verified_user_record(ctx.author.id, email, fullname)
             role = discord.utils.get(ctx.guild.roles, name = "Verified")
-            await author.add_roles(role)
+            await ctx.author.add_roles(role)
             await ctx.respond(embed = discord.Embed(title = f"{ctx.author}, you have been successfully verified!", color = color))
 
         else: #Verification errored, or they have a verification record already in the DB, but lost the role
