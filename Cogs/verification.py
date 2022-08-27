@@ -33,7 +33,6 @@ class Verification(commands.Cog):
         verified, message, color = verify_user(ctx.author.id, email)
 
         if verified: #Prompts user to enter name to finish verifying
-            #author = ctx.author
 
             insert_verified_user_record(ctx.author.id, email, fullname)
             role = discord.utils.get(ctx.guild.roles, name = "Verified")
