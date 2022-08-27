@@ -46,11 +46,11 @@ class Verification(commands.Cog):
     async def clear_error(self, ctx, error):
         await ctx.respond(embed = discord.Embed(title = "An error occured, please ping a Bot Technician", description = error, color = discord.Color.red()))
 ###########################################################################
-    @commands.command(name = 'whois')
+    @discord.slash_command(name = 'whois', description = 'Outputs a user\'s name and email', debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def whois(self, ctx, user):
         if('#' not in user):
-            return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
+            return await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
 
         parts = user.split('#', 1)
         name_part = parts[0]
@@ -58,11 +58,11 @@ class Verification(commands.Cog):
 
         member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
         if member is None:
-            return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
+            return await ctx.respond(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
 
         email, name, time = get_verification_record(member.id)
         if(email is None):
-            return await ctx.send(embed = discord.Embed(title = "Not Verified", description = f"{user} is not verified.", color = discord.Color.orange()))
+            return await ctx.respond(embed = discord.Embed(title = "Not Verified", description = f"{user} is not verified.", color = discord.Color.orange()))
 
         if(name is None):
             name = "*No name registered*"
@@ -72,17 +72,17 @@ class Verification(commands.Cog):
         recordEmbed.add_field(name = ("*Name*"), value = name, inline=False)
         recordEmbed.add_field(name = ("*Email*"), value = email, inline=False)
         recordEmbed.add_field(name = ("*Time Verified*"), value = timestamp, inline=False)
-        return await ctx.send(embed = recordEmbed)
+        return await ctx.respond(embed = recordEmbed)
 
     @whois.error
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !whois UserName#0000", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !whois UserName#0000", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
-            await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use whois")
         else:
-            await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Whois error: ", error)
 ###########################################################################
     @commands.command(name = "manualverify", aliases = ["manual_verify", "manuallyverify"])
