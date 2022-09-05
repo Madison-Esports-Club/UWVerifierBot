@@ -85,6 +85,7 @@ class Verification(commands.Cog):
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Whois error: ", error)
 ###########################################################################
+    #todo make this a subcommand of verify
     @discord.slash_command(name = "manualverify", description= "Manually gives a user verified status.", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def manualverify(self, ctx, member: discord.Option(discord.SlashCommandOptionType.user), email: discord.Option(discord.SlashCommandOptionType.string), full_name: discord.Option(discord.SlashCommandOptionType.string)):
