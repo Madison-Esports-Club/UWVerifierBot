@@ -15,7 +15,8 @@
             "/verify email@wisc.edu fullName": "Starts verification process to access server features, must have valid @wisc.edu email (i.e: /verify jSmith@wisc.edu John Smith)"
             ,"/whois UserName#0000": "Returns the email address and name of the specified verified discord user. Only accessible to Board Members, Game Officers, and Mods"
             ,"!manualverify UserName#0000 email@wisc.edu full_name": "Manually verifies the user with the information provided. Only accessible to Board Members, Game Officers, and Mods"
-            ,"!del_verify UserName#0000 (or) !del_verify email@wisc.edu" : "Manually deletes a user's verification record. Only accessible to Board Members, Game Officers, and Mods"
+            ,"/unverify user UserName#0000": "Manually deletes a user's verification record. Only accessible to Board Members, Game Officers, and Mods"
+            ,"/unverify email email@wisc.edu": "Manually deletes any verification record containing the specified email (freeing it to be reused). Only accessible to Board Members, Game Officers, and Mods"
         },
         "misc":{
             "!help": "Displays help menu"
