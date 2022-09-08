@@ -86,46 +86,32 @@ class Verification(commands.Cog):
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Whois error: ", error)
 ###########################################################################
-    @commands.command(name = "manualverify", aliases = ["manual_verify", "manuallyverify"])
+    #todo make this a subcommand of verify
+    @discord.slash_command(name = "manualverify", description= "Manually gives a user verified status.", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def manualverify(self, ctx, user, email, *, full_name):
-        if('#' not in user):
-            return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
-
-        parts = user.split('#', 1)
-        name_part = parts[0]
-        discriminator_part = parts[1]
-
-        member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
+    async def manualverify(self, ctx, member: discord.Option(discord.SlashCommandOptionType.user), email: discord.Option(discord.SlashCommandOptionType.string), full_name: discord.Option(discord.SlashCommandOptionType.string)):
         if member is None:
-            return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
+            return await ctx.respond(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
 
         if(discord.utils.get(member.roles, name = "Verified") != None):
-            await ctx.send(embed = discord.Embed(title = f"{user} is already verified!", color = discord.Color.red()))
-            return await ctx.message.delete()
+            return await ctx.respond(embed = discord.Embed(title = f"{user} is already verified!", color = discord.Color.red()))
 
-
-        """verified, message, color = verify_user(user.id, email)
-        if verified:"""
         insert_verified_user_record(member.id, email, full_name)
         role = discord.utils.get(ctx.guild.roles, name = "Verified")
         await member.add_roles(role)
 
-        await ctx.message.delete() #Deletes all messages except final confirmation
-        message = f"{user} has been successfully verified!"
-        await ctx.send(embed = discord.Embed(title = message, color = discord.Color.green()))
-        """else: #Verification errored
-            await ctx.send(embed = discord.Embed(title = "Error", description = message, color = color))"""
+        message = f"{member} has been successfully verified!"
+        await ctx.respond(embed = discord.Embed(title = message, color = discord.Color.green()))
 
     @manualverify.error
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !manualverify UserName#0000 email@wisc.edu FullName", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !manualverify @User email@wisc.edu FullName", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
-            await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use manualverify")
         else:
-            await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Manualverify error: ",error)
 ###########################################################################
     unverify = SlashCommandGroup("unverify", "Ways to unverify a user or email address")
