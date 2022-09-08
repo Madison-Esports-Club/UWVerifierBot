@@ -1,4 +1,5 @@
 import discord
+from discord.commands import SlashCommandGroup
 from discord.ext import commands
 import psycopg2
 import datetime
@@ -113,57 +114,88 @@ class Verification(commands.Cog):
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Manualverify error: ",error)
 ###########################################################################
-    @commands.command(name = "deleteverification", aliases = ["del_verification", "del_verify", "deleteverify", "delverify", "unverify"])
+    unverify = SlashCommandGroup("unverify", "Ways to unverify a user or email address")
+###########################################################################
+    @unverify.command(name = 'user', description = "Removes a user's verification record", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def del_verify(self, ctx, user):
+    async def unverifyuser(self, ctx, user:discord.Option(str)):
 
-        if('#' not in user and '@' not in user):
-            return await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000) OR use email with an @", color = discord.Color.red()))
+        if('#' not in user):
+            return await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
 
-        member = None
+        await ctx.defer()
+        parts = user.split('#', 1)
+        name_part = parts[0]
+        discriminator_part = parts[1]
 
-        if ('#' in user): #Username used as parameter
-            parts = user.split('#', 1)
-            name_part = parts[0]
-            discriminator_part = parts[1]
+        member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
+        if member is None:
+            return await ctx.respond(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
 
-            member = discord.utils.get(ctx.guild.members,  name = name_part, discriminator = discriminator_part)
-            if member is None:
-                return await ctx.send(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
-        else: #Email used as parameter
-            email = user
 
         try:
             cursor, conn = dbconnect()
-            if ('#' in user):
-                cursor.execute("DELETE FROM verified_users WHERE user_id = %s;", (member.id,))
-            else:
-                cursor.execute("DELETE FROM verified_users WHERE email LIKE %s;", (email,))
+            #Get the user first, then delete so we can remove role
+            cursor.execute("DELETE FROM verified_users WHERE user_id = %s;", (member.id,))
             conn.commit()
             conn.close()
 
             if (cursor.rowcount != 1): #Did not delete (record not found)
-                await ctx.send(embed = discord.Embed(title = "Record not found", color = discord.Color.red()))
+                await ctx.respond(embed = discord.Embed(title = "Record not found", color = discord.Color.red()))
             else: #Deleted
                 role = discord.utils.get(ctx.guild.roles, name = "Verified")
                 if member != None:
                     if role in member.roles:
                         await member.remove_roles(role)
 
-                await ctx.send(embed = discord.Embed(title = "Deleted verification record & removed Verified role", color = discord.Color.green()))
+                await ctx.respond(embed = discord.Embed(title = "Deleted verification record & removed Verified role", color = discord.Color.green()))
         except Exception as error:
-            await ctx.send(embed = discord.Embed(title = "Error:", description = error, color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Error:", description = error, color = discord.Color.red()))
 
-    @del_verify.error
+    @unverifyuser.error
     async def clear_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !del_verify UserName#0000 or !del_verify name@wisc.edu", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /unverify user UserName#0000", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
-            await ctx.send(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
-            print(f"non-admin {ctx.message.author} tried to use del_verify")
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use unverify user")
         else:
-            await ctx.send(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
-            print("Del_verify error: ",error)
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("unverify user error: ",error)
+###########################################################################
+    @unverify.command(name = 'email', description = "Removes any verification record associated with an email", debug_guilds=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def unverifyemail(self, ctx, email:discord.Option(str)):
+
+        if('@' not in email or'.' not in email):
+            return await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Please include valid email", color = discord.Color.red()))
+
+        await ctx.defer()
+
+        try:
+            cursor, conn = dbconnect()
+            #Get the user first, then delete so we can remove role
+            cursor.execute("DELETE FROM verified_users WHERE email = %s;", (email,))
+            conn.commit()
+            conn.close()
+
+            if (cursor.rowcount != 1): #Did not delete (record not found)
+                await ctx.respond(embed = discord.Embed(title = "Record not found", color = discord.Color.red()))
+            else: #Deleted
+                await ctx.respond(embed = discord.Embed(title = "Deleted verification record & removed Verified role", color = discord.Color.green()))
+        except Exception as error:
+            await ctx.respond(embed = discord.Embed(title = "Error:", description = error, color = discord.Color.red()))
+
+    @unverifyemail.error
+    async def clear_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /unverify email name@wisc.edu", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use unverify email")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("unverify error: ",error)
 ###########################################################################
 def insert_verified_user_record(user_id, email, name):
     global time
