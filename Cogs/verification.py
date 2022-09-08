@@ -91,10 +91,10 @@ class Verification(commands.Cog):
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def manualverify(self, ctx, member: discord.Option(discord.SlashCommandOptionType.user), email: discord.Option(discord.SlashCommandOptionType.string), full_name: discord.Option(discord.SlashCommandOptionType.string)):
         if member is None:
-            return await ctx.respond(embed = discord.Embed(title = "Unknown user", description = f"Could not find {user} in this server", color = discord.Color.red()))
+            return await ctx.respond(embed = discord.Embed(title = "Unknown user", description = f"Could not find {member} in this server", color = discord.Color.red()))
 
         if(discord.utils.get(member.roles, name = "Verified") != None):
-            return await ctx.respond(embed = discord.Embed(title = f"{user} is already verified!", color = discord.Color.red()))
+            return await ctx.respond(embed = discord.Embed(title = f"{member} is already verified!", color = discord.Color.red()))
 
         insert_verified_user_record(member.id, email, full_name)
         role = discord.utils.get(ctx.guild.roles, name = "Verified")
