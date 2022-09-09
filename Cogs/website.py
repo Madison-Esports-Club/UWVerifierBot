@@ -4,8 +4,14 @@ import discord
 from configparser import ConfigParser
 import os
 from datetime import datetime
+from dateutil import parser
 import httpx
 from discord.ext import commands, bridge
+
+CalendarNames = ["General", "League of Legends", "Valorant", "Rainbow 6", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
+GameOptions = []
+for label in CalendarNames:
+    GameOptions.append(discord.SelectOption(label=label))
 
 class Website(commands.Cog):
     def __init__(self, bot):
@@ -13,20 +19,26 @@ class Website(commands.Cog):
     ###########################################################################
     @discord.slash_command(description = "Creates a new event on the website calendar.")
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def createevent(self, ctx, name:discord.Option(str), location:discord.Option(str), game:discord.Option(str), date:discord.Option(str), time:discord.Option(str), ampm:discord.Option(str)):
+    async def createevent(
+        self,
+        ctx,
+        name:discord.Option(str, "Enter the name of the event"),
+        location:discord.Option(str, "Enter the location of the event"),
+        game:discord.Option(str, "Choose what calendar this event should be on", choices = CalendarNames),
+        date:discord.Option(str, "Enter the date (MM/DD/YY)"),
+        time:discord.Option(str, "Enter the time")
+    ):
         await ctx.defer()
         logEmbed = discord.Embed(title = "New Event", color = discord.Color.teal())
 
         try:
-            start = datetime.strptime(f"{date} {time} {ampm}", "%m/%d/%y %I:%M %p")
+            datestring = f"{date} {time}"
+            start = parser.parse(datestring, fuzzy=True)
         except ValueError:
-            await ctx.respond(embed = discord.Embed(title = "Invalid date format", description = "Correct usage: !createevent \"<name>\" \"<location>\" \"<game>\" mm/dd/yy HH:MM AM/PM", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Invalid date format", description = "Make sure your date is Month/Day/Year and your time is valid 12 hour time", color = discord.Color.red()))
             return
 
-        calendar = parseGameToCalendar(game)
-        if calendar == None:
-            await ctx.respond(embed = discord.Embed(title = "Invalid Game Name", description = "Check your spelling on the game name! If you think it is correct please contact the devs.", color = discord.Color.red()))
-            return
+        calendar = game
 
         data = {
             "Title": name,
@@ -85,68 +97,37 @@ class InhouseView(discord.ui.View):
     @discord.ui.select( # the decorator that lets you specify the properties of the select menu
         row = 0,
         placeholder = "Choose a Game", # the placeholder text that will be displayed if nothing is selected
-        min_values = 1, # the minimum number of values that must be selected by the users
-        max_values = 1, # the maxmimum number of values that can be selected by the users
-        options = [ # the list of options from which users can choose, a required field
-            discord.SelectOption(
-                label="League of Legends"
-            ),
-            discord.SelectOption(
-                label="Valorant"
-            ),
-            discord.SelectOption(
-                label="Rainbow 6"
-            ),
-            discord.SelectOption(
-                label="Overwatch"
-            ),
-            discord.SelectOption(
-                label="CS:GO"
-            ),
-            discord.SelectOption(
-                label="Smite"
-            ),
-            discord.SelectOption(
-                label="Rocket League"
-            ),
-            discord.SelectOption(
-                label="DotA 2"
-            ),
-            discord.SelectOption(
-                label="Call of Duty"
-            ),
-            discord.SelectOption(
-                label="Apex Legends"
-            )
-        ]
+        min_values = 1,
+        max_values = 1,
+        options = GameOptions
     )
     async def game_select_callback(self, select, interaction): # the function called when the user is done selecting options
         self.game = select.values[0]
         await interaction.response.defer()
 
-    @discord.ui.select( # the decorator that lets you specify the properties of the select menu
+    @discord.ui.select(
         row = 1,
-        placeholder = "Choose a Day of the Week", # the placeholder text that will be displayed if nothing is selected
-        min_values = 1, # the minimum number of values that must be selected by the users
-        max_values = 1, # the maxmimum number of values that can be selected by the users
+        placeholder = "Choose a Day of the Week",
+        min_values = 1,
+        max_values = 1,
         options = DayOptions
     )
-    async def day_select_callback(self, select, interaction): # the function called when the user is done selecting options
+    async def day_select_callback(self, select, interaction):
         self.day = DayOfWeek.index(select.values[0])
         await interaction.response.defer()
 
-    @discord.ui.select( # the decorator that lets you specify the properties of the select menu
+    @discord.ui.select(
         row = 2,
-        placeholder = "Choose a Time of Day", # the placeholder text that will be displayed if nothing is selected
-        min_values = 1, # the minimum number of values that must be selected by the users
-        max_values = 1, # the maxmimum number of values that can be selected by the users
+        placeholder = "Choose a Time of Day",
+        min_values = 1,
+        max_values = 1,
         options = TimeOptions
     )
-    async def time_select_callback(self, select, interaction): # the function called when the user is done selecting options
+    async def time_select_callback(self, select, interaction):
         self.time = select.values[0]
         await interaction.response.defer()
 
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, emoji="✅") # Create a button with the label "😎 Click me!" with color Blurple
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, emoji="✅")
     async def confirm_callback(self, button, interaction):
         complete = True
         for child in self.children: # loop through all the children of the view
@@ -170,7 +151,7 @@ class InhouseView(discord.ui.View):
         else:
             await interaction.message.edit(content = "Select the new Inhouse time and date. (Fill in all fields!)")
 
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌") # Create a button with the label "😎 Click me!" with color Blurple
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
     async def cancel_callback(self, button, interaction):
         await interaction.message.delete()
 
@@ -195,29 +176,6 @@ async def sendPost(endpoint, json):
         except ValueError:
             return resp.status_code
         return resp.status_code
-###########################################################################
-
-LoLNames = ["lol", "league", "league of legends"]
-ValorantNames = ["valorant","val"]
-R6Names = ["Rainbow six", "rainbow 6", "rainbow six siege", "rainbow 6 siege", "r6", "r6 siege"]
-OWNames = ["ow", "overwatch", "overwatch 2", "ow2"]
-CSGONames = ["csgo","cs:go","cs","counterstrike","counter strike", "counterstrike global offensive", "counterstrike: global offensive"]
-SmiteNames = ["smite"]
-RLNames = ["rocket league", "rl"]
-DotANames = ["dota", "dota2", "defense of the ancients", "defense of the ancients 2"]
-CoDNames = ["cod", "call of duty"]
-ApexNames = ["apex", "apex legends"]
-NormalizeNames = [("General", ["general"]), ("League of Legends", LoLNames), ("Valorant", ValorantNames), ("Rainbow 6", R6Names), ("Overwatch", OWNames), ("CS:GO", CSGONames),("Smite", SmiteNames), ("Rocket League", RLNames), ("DotA 2", DotANames), ("Call of Duty", CoDNames),("Apex Legends", ApexNames)]
-"""
-Takes in a "game name" and attempts to normalize it to the full Calendar name
-"""
-def parseGameToCalendar(game):
-    game = game.lower()
-    for names in NormalizeNames:
-        for name in names[1]:
-            if(name == game):
-                return names[0]
-    return None
 ###########################################################################
 def setup(bot):
     bot.add_cog(Website(bot))
