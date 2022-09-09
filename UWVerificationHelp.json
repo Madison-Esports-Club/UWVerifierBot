@@ -7,7 +7,7 @@
             "`help`, `changelog`, `ping`"
         ,
         "Website":
-            "`createevent`", "`changeinhouse`"
+            "`createevent`, `changeinhouse`"
     },
 
     "full": {
