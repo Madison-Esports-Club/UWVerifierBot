@@ -7,7 +7,7 @@ import json
 from configparser import ConfigParser
 
 from Cogs.db import dbconnect
-from Cogs.verification import is_verified
+from Cogs.Helpers.verificationHelpers import is_verified
 
 bot=commands.Bot(command_prefix = commands.when_mentioned_or("!")
                 ,case_insensative = True
