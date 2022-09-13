@@ -4,4 +4,6 @@ Test.py
 *.csv
 *.DS_store
 
+
 Cogs/__pycache__/
+Cogs/Helpers/__pycache__/
