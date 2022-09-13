@@ -15,7 +15,12 @@ class Verification(commands.Cog):
         self.bot=bot
 ###########################################################################
     @discord.slash_command(name='verify', description="Verifies a user for access to locked channels", debug_guilds=[887366492730036276])
-    async def verify(self, ctx, email, fullname):
+    async def verify(
+        self,
+        ctx,
+        email: discord.Option(str, "Enter your wisc.edu email", required = True),
+        fullname: discord.Option(str, "Enter your full name", required = True)
+    ):
         if(discord.utils.get(ctx.author.roles, name = "Verified") != None): # We could have this check the DB, would maybe cause issues with manually verified folks.
             await ctx.respond(embed = discord.Embed(title = "You are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
             return
@@ -44,7 +49,7 @@ class Verification(commands.Cog):
 ###########################################################################
     @discord.slash_command(name = 'whois', description = 'Outputs a user\'s name and email', debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def whois(self, ctx, user):
+    async def whois(self, ctx, user: discord.Option(str, "Enter the user to look up (UserName#0000)", required = True)):
         if('#' not in user):
             return await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
 
@@ -84,7 +89,13 @@ class Verification(commands.Cog):
     #todo make this a subcommand of verify
     @discord.slash_command(name = "manualverify", description= "Manually gives a user verified status.", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def manualverify(self, ctx, member: discord.Option(discord.SlashCommandOptionType.user), email: discord.Option(discord.SlashCommandOptionType.string), full_name: discord.Option(discord.SlashCommandOptionType.string)):
+    async def manualverify(
+        self,
+        ctx,
+        member: discord.Option(discord.SlashCommandOptionType.user, "@ the user you wish to manually verify", required = True),
+        email: discord.Option(discord.SlashCommandOptionType.string, "Enter the user's wisc.edu email", required = True),
+        full_name: discord.Option(discord.SlashCommandOptionType.string, "Enter the user's full name", required = True)
+    ):
         if member is None:
             return await ctx.respond(embed = discord.Embed(title = "Unknown user", description = f"Could not find {member} in this server", color = discord.Color.red()))
 
@@ -113,7 +124,7 @@ class Verification(commands.Cog):
 ###########################################################################
     @unverify.command(name = 'user', description = "Removes a user's verification record", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def unverifyuser(self, ctx, user:discord.Option(str)):
+    async def unverifyuser(self, ctx, user: discord.Option(str, "Enter the user to unverify (UserName#0000)", required = True)):
 
         if('#' not in user):
             return await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Please include 4-digit discriminator (#0000)", color = discord.Color.red()))
@@ -160,8 +171,7 @@ class Verification(commands.Cog):
 ###########################################################################
     @unverify.command(name = 'email', description = "Removes any verification record associated with an email", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def unverifyemail(self, ctx, email:discord.Option(str)):
-
+    async def unverifyemail(self, ctx, email:discord.Option(str, "Enter the wisc email to unverify", required = True)):
         if('@' not in email or'.' not in email):
             return await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Please include valid email", color = discord.Color.red()))
 
