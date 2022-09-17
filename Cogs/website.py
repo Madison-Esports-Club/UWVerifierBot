@@ -77,7 +77,7 @@ class Website(commands.Cog):
     async def changeinhouse(self, ctx):
         await ctx.respond("Select the new Inhouse time and date", view=InhouseView())
     ###########################################################################
-    @discord.slash_command(description = "Deletes an event from the website calendar.")
+    @discord.slash_command(description = "Deletes an event from the website calendar.", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def deleteevent(
         self,
@@ -90,12 +90,17 @@ class Website(commands.Cog):
         status, data = await sendPostGetData(f"GetEvents?Calendar={calendar}")
 
         if(status == 200):
-            print(f"Got data {data}")
-            logEmbed.add_field(name=("*Data*"),value = data, inline=False)
+            if(len(data) > 0):
+                print(f"Got data {data}")
+                events = []
+                for eventData in data:
+                    events.append(Event(eventData))
 
-            await ctx.respond(embed = logEmbed)
+                await ctx.respond("Select the event to delete", view=DeleteEventView(events))
+            else:
+                await ctx.respond(content = "No upcoming events on that calendar")
         else:
-            await ctx.respond(content = "Failed to create event")
+            await ctx.respond(content = "Failed to get events")
 
 
     @deleteevent.error
@@ -109,6 +114,60 @@ class Website(commands.Cog):
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Delete Event error: ", error)
             raise error
+###########################################################################
+# Defines a custom Select containing colour options
+# that the user can choose. The callback function
+# of this class is called when the user changes their choice.
+class EventDropdown(discord.ui.Select):
+    def __init__(self, events):
+        self.events = events
+        self.event = None;
+        self.selected = -1
+        self.eventOptions = []
+        for event in self.events:
+            self.eventOptions.append(discord.SelectOption(label=event.title, value=str(event.id), description=event.start))
+
+        super().__init__(
+            placeholder = "Choose an Event", # the placeholder text that will be displayed if nothing is selected
+            min_values = 1,
+            max_values = 1,
+            options = self.eventOptions
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        self.selected = self.values[0]
+        self.event = discord.utils.get(self.events, id=int(self.selected))
+        await interaction.response.defer()
+###########################################################################
+class DeleteEventView(discord.ui.View):
+    def __init__(self, events):
+        super().__init__()
+        self.events = events
+        self.dropdown = EventDropdown(events)
+
+        self.add_item(self.dropdown)
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, emoji="✅")
+    async def confirm_callback(self, button, interaction):
+        complete = True
+        for child in self.children: # loop through all the children of the view
+            if(hasattr(child, "values") and len(child.values) == 0):
+                complete = False
+
+        if complete:
+            status = await sendPost(f"DeleteEvent?ID={self.dropdown.selected}", None)
+            if(status == 200):
+                print(f"{interaction.user.name} deleted event {self.dropdown.event.title}")
+                await interaction.message.edit(content = f"Deleted event {self.dropdown.event.title}", view = None)
+            else:
+                await interaction.message.edit(content = f"Failed to delete event {self.dropdown.event.title}, please try again or contact the Devs", view = None)
+        else:
+            await interaction.message.edit(content = "Select the event to Delete.")
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
+    async def cancel_callback(self, button, interaction):
+        await interaction.message.delete()
+
 ###########################################################################
 DayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 DayOptions = []
@@ -233,3 +292,10 @@ async def sendPostGetData(endpoint):
 ###########################################################################
 def setup(bot):
     bot.add_cog(Website(bot))
+
+class Event():
+    def __init__(self, json):
+        self.id = json["id"]
+        self.title=json["title"]
+        self.location = json["location"]
+        self.start = json["start"]
