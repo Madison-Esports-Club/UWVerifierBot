@@ -26,7 +26,7 @@ class Website(commands.Cog):
         location:discord.Option(str, "Enter the location of the event"),
         game:discord.Option(str, "Choose what calendar this event should be on", choices = CalendarNames),
         date:discord.Option(str, "Enter the date (MM/DD/YY)"),
-        time:discord.Option(str, "Enter the time")
+        time:discord.Option(str, "Enter the time (12 hour, am/pm) ")
     ):
         await ctx.defer()
         logEmbed = discord.Embed(title = "New Event", color = discord.Color.teal())
@@ -63,7 +63,7 @@ class Website(commands.Cog):
     @createevent.error
     async def createevent_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !createevent \"<name>\" \"<location>\" \"<description>\" mm/dd/yy HH:MM AM/PM", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !createevent \"<name>\" \"<location>\" \"<game>\" <mm/dd/yy> <HH:MM AM/PM>", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
             await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use createevent")
@@ -76,6 +76,39 @@ class Website(commands.Cog):
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def changeinhouse(self, ctx):
         await ctx.respond("Select the new Inhouse time and date", view=InhouseView())
+    ###########################################################################
+    @discord.slash_command(description = "Deletes an event from the website calendar.")
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def deleteevent(
+        self,
+        ctx,
+        calendar:discord.Option(str, "Choose what calendar you want to delete an event from", choices = CalendarNames)
+    ):
+        await ctx.defer()
+        logEmbed = discord.Embed(title = "Get Event", color = discord.Color.teal())
+
+        status, data = await sendPostGetData(f"GetEvents?Calendar={calendar}")
+
+        if(status == 200):
+            print(f"Got data {data}")
+            logEmbed.add_field(name=("*Data*"),value = data, inline=False)
+
+            await ctx.respond(embed = logEmbed)
+        else:
+            await ctx.respond(content = "Failed to create event")
+
+
+    @deleteevent.error
+    async def deleteevent_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !deleteevent \"<calendar>\"", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use deleteevent")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Delete Event error: ", error)
+            raise error
 ###########################################################################
 DayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 DayOptions = []
@@ -176,6 +209,27 @@ async def sendPost(endpoint, json):
         except ValueError:
             return resp.status_code
         return resp.status_code
+###########################################################################
+async def sendPostGetData(endpoint):
+    try: #Config var in Heroku
+        headertext = f'apikey {os.environ["APIKEY"]}&name {os.environ["BOT_NAME"]}'
+        host = os.environ["WEBSITE_IP"]
+    except: #Runs from system
+        config_object = ConfigParser()
+        config_object.read("BotVariables.ini")
+        variables = config_object["variables"]
+        headertext = f'apikey {variables["APIKEY"]}&name {variables["BOT_NAME"]}'
+        host = variables["WEBSITE_IP"]
+
+    headers = {"Authorization" : headertext}
+    async with httpx.AsyncClient(verify = False) as client:
+        resp = await client.post(f'https://{host}/api/{endpoint}', headers = headers)
+        print(resp)
+        try:
+            print(resp.json())
+        except ValueError:
+            return resp.status_code, None
+        return resp.status_code, resp.json()["value"]
 ###########################################################################
 def setup(bot):
     bot.add_cog(Website(bot))
