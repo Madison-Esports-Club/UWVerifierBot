@@ -46,7 +46,7 @@ class Website(commands.Cog):
             "Calendar": calendar,
             "Start": start.isoformat()
         }
-        status = await sendPost("NewEvent", data)
+        status, response = await sendPost("NewEvent", data)
 
         if(status == 200):
             print(f"{ctx.user.name} Created an event {name} on calendar {calendar}")
@@ -87,11 +87,10 @@ class Website(commands.Cog):
         await ctx.defer()
         logEmbed = discord.Embed(title = "Get Event", color = discord.Color.teal())
 
-        status, data = await sendPostGetData(f"GetEvents?Calendar={calendar}")
+        status, data = await sendPost(f"GetEvents?Calendar={calendar}")
 
         if(status == 200):
             if(len(data) > 0):
-                print(f"Got data {data}")
                 events = []
                 for eventData in data:
                     events.append(Event(eventData))
@@ -152,7 +151,7 @@ class DeleteEventView(discord.ui.View):
                 complete = False
 
         if complete:
-            status = await sendPost(f"DeleteEvent?ID={self.dropdown.selected}", None)
+            status, response = await sendPost(f"DeleteEvent?ID={self.dropdown.selected}", None)
             if(status == 200):
                 print(f"{interaction.user.name} deleted event {self.dropdown.event.title}")
                 await interaction.message.edit(content = f"Deleted event {self.dropdown.event.title}", view = None)
@@ -231,7 +230,7 @@ class InhouseView(discord.ui.View):
                 "DayOfWeek": self.day
             }
 
-            status = await sendPost("NewInhouse", data)
+            status, response = await sendPost("NewInhouse", data)
             if(status == 200):
                 print(f"{interaction.user.name} changed {self.game} Inhouses to {DayOfWeek[self.day]}s at {self.time}")
                 await interaction.message.edit(content = f"Changed {self.game} Inhouses to {DayOfWeek[self.day]}s at {self.time}", view = None)
@@ -245,7 +244,7 @@ class InhouseView(discord.ui.View):
         await interaction.message.delete()
 
 ###########################################################################
-async def sendPost(endpoint, json):
+async def sendPost(endpoint, json = None):
     try: #Config var in Heroku
         headertext = f'apikey {os.environ["APIKEY"]}&name {os.environ["BOT_NAME"]}'
         host = os.environ["WEBSITE_IP"]
@@ -259,28 +258,6 @@ async def sendPost(endpoint, json):
     headers = {"Authorization" : headertext}
     async with httpx.AsyncClient(verify = False) as client:
         resp = await client.post(f'https://{host}/api/{endpoint}', json = json, headers = headers)
-        print(resp)
-        try:
-            print(resp.json())
-        except ValueError:
-            return resp.status_code
-        return resp.status_code
-###########################################################################
-async def sendPostGetData(endpoint):
-    try: #Config var in Heroku
-        headertext = f'apikey {os.environ["APIKEY"]}&name {os.environ["BOT_NAME"]}'
-        host = os.environ["WEBSITE_IP"]
-    except: #Runs from system
-        config_object = ConfigParser()
-        config_object.read("BotVariables.ini")
-        variables = config_object["variables"]
-        headertext = f'apikey {variables["APIKEY"]}&name {variables["BOT_NAME"]}'
-        host = variables["WEBSITE_IP"]
-
-    headers = {"Authorization" : headertext}
-    async with httpx.AsyncClient(verify = False) as client:
-        resp = await client.post(f'https://{host}/api/{endpoint}', headers = headers)
-        print(resp)
         try:
             print(resp.json())
         except ValueError:
