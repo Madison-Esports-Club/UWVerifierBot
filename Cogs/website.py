@@ -115,9 +115,6 @@ class Website(commands.Cog):
             print("Delete Event error: ", error)
             raise error
 ###########################################################################
-# Defines a custom Select containing colour options
-# that the user can choose. The callback function
-# of this class is called when the user changes their choice.
 class EventDropdown(discord.ui.Select):
     def __init__(self, events):
         self.events = events
@@ -147,7 +144,7 @@ class DeleteEventView(discord.ui.View):
 
         self.add_item(self.dropdown)
 
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, emoji="✅")
+    @discord.ui.button(row=1,label="Confirm", style=discord.ButtonStyle.success, emoji="✅")
     async def confirm_callback(self, button, interaction):
         complete = True
         for child in self.children: # loop through all the children of the view
@@ -164,7 +161,7 @@ class DeleteEventView(discord.ui.View):
         else:
             await interaction.message.edit(content = "Select the event to Delete.")
 
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
+    @discord.ui.button(row=1,label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
     async def cancel_callback(self, button, interaction):
         await interaction.message.delete()
 
