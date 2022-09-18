@@ -7,7 +7,7 @@
             "`help`, `changelog`, `ping`"
         ,
         "Website":
-            "`createevent`, `changeinhouse`"
+            "`createevent`, `changeinhouse`, `deleteevet`"
     },
 
     "full": {
@@ -34,13 +34,16 @@
         },
         "website":{
             "/createevent [name] [location] [calendar] [date] [time]": "Creates a new event on the website calendar with the specified name, location, and date/time. Game can be any of the 10 games or General"
-            ,"/changeinhouse": "Opens a model that alows a game officer to create a recurring inhouse event on the website calendar"
+            ,"/changeinhouse": "Opens a model that allows a game officer to create a recurring inhouse event on the website calendar"
+            ,"/deleteevent [calendar]": "Opens a model that allows a user to delete an existing (future) event from the corresponding calendar"
         }
     },
 
 
     "changeLog":{
-        "3/29/22": "Added alternative use of email as an argument for delete verification command"
+        "9/18/22": "Improved website commands."
+        ,"9/13/22": "Switched the verify comand to slash commands, and improved other verification commands."
+        ,"3/29/22": "Added alternative use of email as an argument for delete verification command"
         ,"10/23/21": "Switched back to using Tag#0000 for commands, unverify role now removes role as well"
         ,"10/22/21": "Added manual commands for admin users, all commands now use (@Tag) instead of (Tag#0000)"
         ,"10/11/21": "Fixed issue of messages with just !! triggering help message\nParenthesis added with email are removed during process"
