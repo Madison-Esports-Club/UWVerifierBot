@@ -53,7 +53,7 @@ class Website(commands.Cog):
             logEmbed.add_field(name=("*Name*"),value = name, inline=False)
             logEmbed.add_field(name=("*Location*"),value = location, inline=False)
             logEmbed.add_field(name=("*Calendar*"),value = calendar, inline=False)
-            logEmbed.add_field(name=("*Starts*"),value = start.isoformat(), inline=False)
+            logEmbed.add_field(name=("*Starts*"),value = start.strftime("%m/%d/%Y %-I:%M %p"), inline=False)
 
             await ctx.respond(embed = logEmbed)
         else:
@@ -63,7 +63,7 @@ class Website(commands.Cog):
     @createevent.error
     async def createevent_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !createevent \"<name>\" \"<location>\" \"<game>\" <mm/dd/yy> <HH:MM AM/PM>", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /createevent \"<name>\" \"<location>\" \"<game>\" <mm/dd/yy> <HH:MM AM/PM>", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
             await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use createevent")
@@ -106,7 +106,7 @@ class Website(commands.Cog):
     @deleteevent.error
     async def deleteevent_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !deleteevent \"<calendar>\"", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /deleteevent \"<calendar>\"", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
             await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use deleteevent")
@@ -122,7 +122,7 @@ class EventDropdown(discord.ui.Select):
         self.selected = -1
         self.eventOptions = []
         for event in self.events:
-            self.eventOptions.append(discord.SelectOption(label=event.title, value=str(event.id), description=event.start))
+            self.eventOptions.append(discord.SelectOption(label=event.title, value=str(event.id), description=event.start.strftime("%m/%d/%Y %-I:%M %p")))
 
         super().__init__(
             placeholder = "Choose an Event", # the placeholder text that will be displayed if nothing is selected
@@ -295,4 +295,4 @@ class Event():
         self.id = json["id"]
         self.title=json["title"]
         self.location = json["location"]
-        self.start = json["start"]
+        self.start = parser.parse(json["start"])
