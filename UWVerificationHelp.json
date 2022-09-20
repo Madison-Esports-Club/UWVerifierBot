@@ -4,7 +4,7 @@
             "`verify`, `whois`, `manualverify`, `del_verify`"
         ,
         "Misc":
-            "`help`, `changelog`, `ping`"
+            "`help`, `ping`"
         ,
         "Events":
             "`createevent`"
@@ -19,7 +19,6 @@
         },
         "misc":{
             "!help": "Displays help menu"
-            ,"!changelog": "Displays bot's changelog"
             ,"!ping": "Displays bot's current ping"
         },
         "settings":{
@@ -33,16 +32,6 @@
             ,"!setleavechannel (channel)": "Sets the channel that you want user leave messages set to. (Requires `Manage Server` permission)"
         }
     },
-
-
-    "changeLog":{
-        "3/29/22": "Added alternative use of email as an argument for delete verification command"
-        ,"10/23/21": "Switched back to using Tag#0000 for commands, unverify role now removes role as well"
-        ,"10/22/21": "Added manual commands for admin users, all commands now use (@Tag) instead of (Tag#0000)"
-        ,"10/11/21": "Fixed issue of messages with just !! triggering help message\nParenthesis added with email are removed during process"
-        ,"9/30/21": "Initial release"
-    },
-
 
     "Cogs":{
         "verification": ""
