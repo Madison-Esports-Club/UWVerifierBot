@@ -6,16 +6,17 @@
         "Misc":
             "`help`, `ping`"
         ,
-        "Events":
-            "`createevent`"
+        "Website":
+            "`createevent`, `changeinhouse`, `deleteevet`"
     },
 
     "full": {
         "verification":{
-            "!verify email@wisc.edu": "Starts verification process to access server features, must have valid @wisc.edu email (i.e: !verify jSmith@wisc.edu)"
-            ,"!whois UserName#0000": "Returns the email address and name of the specified verified discord user. Only accessible to Board Members, Game Officers, and Mods"
-            ,"!manualverify UserName#0000 email@wisc.edu full_name": "Manually verifies the user with the information provided. Only accessible to Board Members, Game Officers, and Mods"
-            ,"!del_verify UserName#0000 (or) !del_verify email@wisc.edu" : "Manually deletes a user's verification record. Only accessible to Board Members, Game Officers, and Mods"
+            "/verify email@wisc.edu fullName": "Starts verification process to access server features, must have valid @wisc.edu email (i.e: /verify jSmith@wisc.edu John Smith)"
+            ,"/whois UserName#0000": "Returns the email address and name of the specified verified discord user. Only accessible to Board Members, Game Officers, and Mods"
+            ,"/manualverify @User email@wisc.edu full_name": "Manually verifies the user with the information provided. Only accessible to Board Members, Game Officers, and Mods"
+            ,"/unverify user UserName#0000": "Manually deletes a user's verification record. Only accessible to Board Members, Game Officers, and Mods"
+            ,"/unverify email email@wisc.edu": "Manually deletes any verification record containing the specified email (freeing it to be reused). Only accessible to Board Members, Game Officers, and Mods"
         },
         "misc":{
             "!help": "Displays help menu"
@@ -30,9 +31,14 @@
             ,"!enableleavemsg (True/False)": "Enables or disables the leave message when someone leaves server (Requires `Manage Server` permission)"
             ,"!leavepicture [url]": "Sets the leave message picture/gif. Leave url blank to revert to default (Requires `Manage Server` permission)"
             ,"!setleavechannel (channel)": "Sets the channel that you want user leave messages set to. (Requires `Manage Server` permission)"
+        },
+        "website":{
+            "/createevent [name] [location] [calendar] [date] [time]": "Creates a new event on the website calendar with the specified name, location, and date/time. Game can be any of the 10 games or General"
+            ,"/changeinhouse": "Opens a model that allows a game officer to create a recurring inhouse event on the website calendar"
+            ,"/deleteevent [calendar]": "Opens a model that allows a user to delete an existing (future) event from the corresponding calendar"
         }
     },
-
+    
     "Cogs":{
         "verification": ""
         ,"db": ""
