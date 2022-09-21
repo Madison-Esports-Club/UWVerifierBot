@@ -4,3 +4,4 @@ requests
 pytz
 dnspython
 httpx
+python-dateutil

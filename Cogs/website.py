@@ -4,8 +4,14 @@ import discord
 from configparser import ConfigParser
 import os
 from datetime import datetime
+from dateutil import parser
 import httpx
 from discord.ext import commands, bridge
+
+CalendarNames = ["General", "League of Legends", "Valorant", "Rainbow 6", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
+GameOptions = []
+for label in CalendarNames:
+    GameOptions.append(discord.SelectOption(label=label))
 
 class Website(commands.Cog):
     def __init__(self, bot):
@@ -13,20 +19,26 @@ class Website(commands.Cog):
     ###########################################################################
     @discord.slash_command(description = "Creates a new event on the website calendar.")
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def createevent(self, ctx, name:discord.Option(str), location:discord.Option(str), game:discord.Option(str), date:discord.Option(str), time:discord.Option(str), ampm:discord.Option(str)):
+    async def createevent(
+        self,
+        ctx,
+        name:discord.Option(str, "Enter the name of the event"),
+        location:discord.Option(str, "Enter the location of the event"),
+        game:discord.Option(str, "Choose what calendar this event should be on", choices = CalendarNames),
+        date:discord.Option(str, "Enter the date (MM/DD/YY)"),
+        time:discord.Option(str, "Enter the time (12 hour, am/pm) ")
+    ):
         await ctx.defer()
         logEmbed = discord.Embed(title = "New Event", color = discord.Color.teal())
 
         try:
-            start = datetime.strptime(f"{date} {time} {ampm}", "%m/%d/%y %I:%M %p")
+            datestring = f"{date} {time}"
+            start = parser.parse(datestring, fuzzy=True)
         except ValueError:
-            await ctx.respond(embed = discord.Embed(title = "Invalid date format", description = "Correct usage: !createevent \"<name>\" \"<location>\" \"<game>\" mm/dd/yy HH:MM AM/PM", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Invalid date format", description = "Make sure your date is Month/Day/Year and your time is valid 12 hour time", color = discord.Color.red()))
             return
 
-        calendar = parseGameToCalendar(game)
-        if calendar == None:
-            await ctx.respond(embed = discord.Embed(title = "Invalid Game Name", description = "Check your spelling on the game name! If you think it is correct please contact the devs.", color = discord.Color.red()))
-            return
+        calendar = game
 
         data = {
             "Title": name,
@@ -34,14 +46,14 @@ class Website(commands.Cog):
             "Calendar": calendar,
             "Start": start.isoformat()
         }
-        status = await sendPost("NewEvent", data)
+        status, response = await sendPost("NewEvent", data)
 
         if(status == 200):
             print(f"{ctx.user.name} Created an event {name} on calendar {calendar}")
             logEmbed.add_field(name=("*Name*"),value = name, inline=False)
             logEmbed.add_field(name=("*Location*"),value = location, inline=False)
             logEmbed.add_field(name=("*Calendar*"),value = calendar, inline=False)
-            logEmbed.add_field(name=("*Starts*"),value = start.isoformat(), inline=False)
+            logEmbed.add_field(name=("*Starts*"),value = start.strftime("%m/%d/%Y %-I:%M %p"), inline=False)
 
             await ctx.respond(embed = logEmbed)
         else:
@@ -51,7 +63,7 @@ class Website(commands.Cog):
     @createevent.error
     async def createevent_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: !createevent \"<name>\" \"<location>\" \"<description>\" mm/dd/yy HH:MM AM/PM", color = discord.Color.red()))
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /createevent \"<name>\" \"<location>\" \"<game>\" <mm/dd/yy> <HH:MM AM/PM>", color = discord.Color.red()))
         elif isinstance(error, commands.MissingAnyRole):
             await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use createevent")
@@ -64,6 +76,94 @@ class Website(commands.Cog):
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def changeinhouse(self, ctx):
         await ctx.respond("Select the new Inhouse time and date", view=InhouseView())
+    ###########################################################################
+    @discord.slash_command(description = "Deletes an event from the website calendar.", debug_guilds=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def deleteevent(
+        self,
+        ctx,
+        calendar:discord.Option(str, "Choose what calendar you want to delete an event from", choices = CalendarNames)
+    ):
+        await ctx.defer()
+        logEmbed = discord.Embed(title = "Get Event", color = discord.Color.teal())
+
+        status, data = await sendPost(f"GetEvents?Calendar={calendar}")
+
+        if(status == 200):
+            if(len(data) > 0):
+                events = []
+                for eventData in data:
+                    events.append(Event(eventData))
+
+                await ctx.respond("Select the event to delete", view=DeleteEventView(events))
+            else:
+                await ctx.respond(content = "No upcoming events on that calendar")
+        else:
+            await ctx.respond(content = "Failed to get events")
+
+
+    @deleteevent.error
+    async def deleteevent_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /deleteevent \"<calendar>\"", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use deleteevent")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Delete Event error: ", error)
+            raise error
+###########################################################################
+class EventDropdown(discord.ui.Select):
+    def __init__(self, events):
+        self.events = events
+        self.event = None;
+        self.selected = -1
+        self.eventOptions = []
+        for event in self.events:
+            self.eventOptions.append(discord.SelectOption(label=event.title, value=str(event.id), description=event.start.strftime("%m/%d/%Y %-I:%M %p")))
+
+        super().__init__(
+            placeholder = "Choose an Event", # the placeholder text that will be displayed if nothing is selected
+            min_values = 1,
+            max_values = 1,
+            options = self.eventOptions
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        self.selected = self.values[0]
+        self.event = discord.utils.get(self.events, id=int(self.selected))
+        await interaction.response.defer()
+###########################################################################
+class DeleteEventView(discord.ui.View):
+    def __init__(self, events):
+        super().__init__()
+        self.events = events
+        self.dropdown = EventDropdown(events)
+
+        self.add_item(self.dropdown)
+
+    @discord.ui.button(row=1,label="Confirm", style=discord.ButtonStyle.success, emoji="✅")
+    async def confirm_callback(self, button, interaction):
+        complete = True
+        for child in self.children: # loop through all the children of the view
+            if(hasattr(child, "values") and len(child.values) == 0):
+                complete = False
+
+        if complete:
+            status, response = await sendPost(f"DeleteEvent?ID={self.dropdown.selected}", None)
+            if(status == 200):
+                print(f"{interaction.user.name} deleted event {self.dropdown.event.title}")
+                await interaction.message.edit(content = f"Deleted event {self.dropdown.event.title}", view = None)
+            else:
+                await interaction.message.edit(content = f"Failed to delete event {self.dropdown.event.title}, please try again or contact the Devs", view = None)
+        else:
+            await interaction.message.edit(content = "Select the event to Delete.")
+
+    @discord.ui.button(row=1,label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
+    async def cancel_callback(self, button, interaction):
+        await interaction.message.delete()
+
 ###########################################################################
 DayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 DayOptions = []
@@ -85,68 +185,37 @@ class InhouseView(discord.ui.View):
     @discord.ui.select( # the decorator that lets you specify the properties of the select menu
         row = 0,
         placeholder = "Choose a Game", # the placeholder text that will be displayed if nothing is selected
-        min_values = 1, # the minimum number of values that must be selected by the users
-        max_values = 1, # the maxmimum number of values that can be selected by the users
-        options = [ # the list of options from which users can choose, a required field
-            discord.SelectOption(
-                label="League of Legends"
-            ),
-            discord.SelectOption(
-                label="Valorant"
-            ),
-            discord.SelectOption(
-                label="Rainbow 6"
-            ),
-            discord.SelectOption(
-                label="Overwatch"
-            ),
-            discord.SelectOption(
-                label="CS:GO"
-            ),
-            discord.SelectOption(
-                label="Smite"
-            ),
-            discord.SelectOption(
-                label="Rocket League"
-            ),
-            discord.SelectOption(
-                label="DotA 2"
-            ),
-            discord.SelectOption(
-                label="Call of Duty"
-            ),
-            discord.SelectOption(
-                label="Apex Legends"
-            )
-        ]
+        min_values = 1,
+        max_values = 1,
+        options = GameOptions
     )
     async def game_select_callback(self, select, interaction): # the function called when the user is done selecting options
         self.game = select.values[0]
         await interaction.response.defer()
 
-    @discord.ui.select( # the decorator that lets you specify the properties of the select menu
+    @discord.ui.select(
         row = 1,
-        placeholder = "Choose a Day of the Week", # the placeholder text that will be displayed if nothing is selected
-        min_values = 1, # the minimum number of values that must be selected by the users
-        max_values = 1, # the maxmimum number of values that can be selected by the users
+        placeholder = "Choose a Day of the Week",
+        min_values = 1,
+        max_values = 1,
         options = DayOptions
     )
-    async def day_select_callback(self, select, interaction): # the function called when the user is done selecting options
+    async def day_select_callback(self, select, interaction):
         self.day = DayOfWeek.index(select.values[0])
         await interaction.response.defer()
 
-    @discord.ui.select( # the decorator that lets you specify the properties of the select menu
+    @discord.ui.select(
         row = 2,
-        placeholder = "Choose a Time of Day", # the placeholder text that will be displayed if nothing is selected
-        min_values = 1, # the minimum number of values that must be selected by the users
-        max_values = 1, # the maxmimum number of values that can be selected by the users
+        placeholder = "Choose a Time of Day",
+        min_values = 1,
+        max_values = 1,
         options = TimeOptions
     )
-    async def time_select_callback(self, select, interaction): # the function called when the user is done selecting options
+    async def time_select_callback(self, select, interaction):
         self.time = select.values[0]
         await interaction.response.defer()
 
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, emoji="✅") # Create a button with the label "😎 Click me!" with color Blurple
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, emoji="✅")
     async def confirm_callback(self, button, interaction):
         complete = True
         for child in self.children: # loop through all the children of the view
@@ -161,7 +230,7 @@ class InhouseView(discord.ui.View):
                 "DayOfWeek": self.day
             }
 
-            status = await sendPost("NewInhouse", data)
+            status, response = await sendPost("NewInhouse", data)
             if(status == 200):
                 print(f"{interaction.user.name} changed {self.game} Inhouses to {DayOfWeek[self.day]}s at {self.time}")
                 await interaction.message.edit(content = f"Changed {self.game} Inhouses to {DayOfWeek[self.day]}s at {self.time}", view = None)
@@ -170,12 +239,12 @@ class InhouseView(discord.ui.View):
         else:
             await interaction.message.edit(content = "Select the new Inhouse time and date. (Fill in all fields!)")
 
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌") # Create a button with the label "😎 Click me!" with color Blurple
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
     async def cancel_callback(self, button, interaction):
         await interaction.message.delete()
 
 ###########################################################################
-async def sendPost(endpoint, json):
+async def sendPost(endpoint, json = None):
     try: #Config var in Heroku
         headertext = f'apikey {os.environ["APIKEY"]}&name {os.environ["BOT_NAME"]}'
         host = os.environ["WEBSITE_IP"]
@@ -189,35 +258,18 @@ async def sendPost(endpoint, json):
     headers = {"Authorization" : headertext}
     async with httpx.AsyncClient(verify = False) as client:
         resp = await client.post(f'https://{host}/api/{endpoint}', json = json, headers = headers)
-        print(resp)
         try:
             print(resp.json())
         except ValueError:
-            return resp.status_code
-        return resp.status_code
-###########################################################################
-
-LoLNames = ["lol", "league", "league of legends"]
-ValorantNames = ["valorant","val"]
-R6Names = ["Rainbow six", "rainbow 6", "rainbow six siege", "rainbow 6 siege", "r6", "r6 siege"]
-OWNames = ["ow", "overwatch", "overwatch 2", "ow2"]
-CSGONames = ["csgo","cs:go","cs","counterstrike","counter strike", "counterstrike global offensive", "counterstrike: global offensive"]
-SmiteNames = ["smite"]
-RLNames = ["rocket league", "rl"]
-DotANames = ["dota", "dota2", "defense of the ancients", "defense of the ancients 2"]
-CoDNames = ["cod", "call of duty"]
-ApexNames = ["apex", "apex legends"]
-NormalizeNames = [("General", ["general"]), ("League of Legends", LoLNames), ("Valorant", ValorantNames), ("Rainbow 6", R6Names), ("Overwatch", OWNames), ("CS:GO", CSGONames),("Smite", SmiteNames), ("Rocket League", RLNames), ("DotA 2", DotANames), ("Call of Duty", CoDNames),("Apex Legends", ApexNames)]
-"""
-Takes in a "game name" and attempts to normalize it to the full Calendar name
-"""
-def parseGameToCalendar(game):
-    game = game.lower()
-    for names in NormalizeNames:
-        for name in names[1]:
-            if(name == game):
-                return names[0]
-    return None
+            return resp.status_code, None
+        return resp.status_code, resp.json()["value"]
 ###########################################################################
 def setup(bot):
     bot.add_cog(Website(bot))
+
+class Event():
+    def __init__(self, json):
+        self.id = json["id"]
+        self.title=json["title"]
+        self.location = json["location"]
+        self.start = parser.parse(json["start"])
