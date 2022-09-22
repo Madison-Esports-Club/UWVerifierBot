@@ -56,18 +56,6 @@ class Misc(commands.Cog):
         except Exception as e:
             print(e)
 ###########################################################################
-    @commands.command(name = "changelog", aliases = ["changes", "updates"]) #Displays bot's change log
-    async def changelog(self, ctx):
-        logEmbed = discord.Embed(title = "UW Verification Bot Change Log", color = discord.Color.teal())
-
-        with open("UWVerificationHelp.json","r") as logFile:
-            data = json.load(logFile)
-        data = data["changeLog"]
-        for key in data:
-            logEmbed.add_field(name=("*" + key + "*"),value = data[key],inline=False)
-
-        await ctx.send(embed = logEmbed)
-###########################################################################
     @commands.command(name = "purge", aliases = ["clear", "delete"]) #Clears previous x amount of messages (x between 1 & 50)
     @commands.has_guild_permissions(manage_messages = True)
     async def purge(self, ctx, limit: int):
