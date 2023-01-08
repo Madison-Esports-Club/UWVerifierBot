@@ -202,18 +202,57 @@ class Website(commands.Cog):
     @discord.slash_command(description = "Adds a Player to a Team", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def addplayer(self, ctx):
-        await ctx.respond("Select the Team and Player", view=GameTeamPlayerView())
+        await ctx.defer()
+
+        async def add_player_callback(gameName:str, team:Team, player:Player, interaction:discord.Interaction) -> None:
+            status, response = await sendPost(f"AddPlayerToTeam?TeamID={team.id}&PlayerID={player.id}", None)
+            if(status == 200):
+                print(f"{interaction.user.name} added {player.tag} to {team.name}")
+                await interaction.message.edit(content = f"Added Player {player.tag} to {team.name}", view = None)
+            else:
+                if(response['message'] == "Player already on Team"):
+                    await interaction.message.edit(content = f"Player is already on team.", view = None)
+                else:
+                    await interaction.message.edit(content = f"Failed to add player, please try again or contact the Devs", view = None)
+        
+        await ctx.respond("Select the Team and Player", view=GameTeamPlayerView(action = add_player_callback, show_players_on_team = False, include_empty_teams=True))
     
     @addplayer.error
     async def addplayer_error(self, ctx, error):
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /addplayer \"<game>\"", color = discord.Color.red()))
-        elif isinstance(error, commands.MissingAnyRole):
+        if isinstance(error, commands.MissingAnyRole):
             await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use addplayer")
         else:
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Add Player error: ", error)
+            raise error
+###########################################################################
+    @discord.slash_command(description = "Removes a Player from a Team", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def removeplayer(self, ctx):
+        await ctx.defer()
+
+        async def remove_player_callback(gameName:str, team:Team, player:Player, interaction:discord.Interaction) -> None:
+            status, response = await sendPost(f"RemovePlayerFromTeam?TeamID={team.id}&PlayerID={player.id}", None)
+            if(status == 200):
+                print(f"{interaction.user.name} removed {player.tag} from {team.name}")
+                await interaction.message.edit(content = f"Removed Player {player.tag} from {team.name}", view = None)
+            else:
+                if(response['message'] == "Player not on Team"):
+                    await interaction.message.edit(content = f"Player is already on team.", view = None)
+                else:
+                    await interaction.message.edit(content = f"Failed to remove player, please try again or contact the Devs", view = None)
+        
+        await ctx.respond("Select the Team and Player", view=GameTeamPlayerView(action = remove_player_callback, show_players_on_team = True, include_empty_teams=False))
+    
+    @removeplayer.error
+    async def removeplayer_error(self, ctx, error):
+        if isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use removeplayer")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Remove Player error: ", error)
             raise error
 ###########################################################################
 class EventDropdown(discord.ui.Select):
@@ -369,7 +408,7 @@ class PlayerDropdown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         self.selected = self.values[0]
-        self.player = discord.utils.get(self.players, id=int(self.selected))
+        self.player:Player = discord.utils.get(self.players, id=int(self.selected))
         if(self.action != None):
             await self.action(self.view, self, interaction)
         else:
@@ -401,7 +440,7 @@ class TeamDropdown(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction):
         self.selected = self.values[0]
-        self.team = discord.utils.get(self.teams, id=int(self.selected))
+        self.team:Team = discord.utils.get(self.teams, id=int(self.selected))
         if(self.action != None):
             await self.action(self.view, self, interaction)
         else:
@@ -418,6 +457,8 @@ class GameDropdown(discord.ui.Select):
         # If we have a default, we have to make a new set of options.
         options = GameOptions
         if defaultValue in GameNames:
+            self.selected = defaultValue
+            self.game = defaultValue
             options = []
             for label in GameNames:
                 options.append(discord.SelectOption(label=label))
@@ -503,16 +544,24 @@ class GameTeamPlayerView(discord.ui.View):
             e.g. if you are removing players, this should be false.
         Defaults to True
     
-    show_players_on_team: TODO
+    show_players_on_team:
         Sets whether the player dropdown will show only players on the team or only those not on the team
             e.g. if you are removing players this should be true
+            e.g. if you are adding players this should be false
         Defaults to False
     
-    action: TODO
+    action:
         Callback to be called when all three values are filled out and confirm is pressed.
+        Method should take 4 arguments and be async:
+            action(Game:str, TeamID: int, PlayerID: int, interaction: discord.Interaction)
+
     """
-    def __init__(self):
+    def __init__(self, action:Callable[[str, "Team", "Player", discord.Interaction], Awaitable[None]] = None, *, include_empty_teams=True, show_players_on_team = False):
         super().__init__()
+        self.action = action
+        self.includeEmptyTeams = include_empty_teams
+        self.showTeamPlayers = show_players_on_team
+
         self.gameDropdown = GameDropdown(self.game_callback, 0)
 
         # Create a blank dropdown for when we need to clear it
@@ -593,8 +642,13 @@ class GameTeamPlayerView(discord.ui.View):
 
     async def team_callback(self, view:discord.ui.View, teamDropdown: TeamDropdown, interaction:discord.Interaction):
         players = []
-        ##TODO add exclusion/inclusion based on if the player is in the team
-        status, data = await sendPost(f"GetPlayers")
+        endpoint = "GetPlayers"
+        if self.showTeamPlayers:
+            endpoint += f"?IncludeTeamID={int(teamDropdown.selected)}" # Removing players from team
+        else:
+            endpoint += f"?ExcludeTeamID={int(teamDropdown.selected)}" # Adding players to team
+        
+        status, data = await sendPost(endpoint)
 
         if(status == 200):
             self.replace_team_dropdown(TeamDropdown(teamDropdown.teams, self.team_callback, 1, int(teamDropdown.selected)))
@@ -608,13 +662,18 @@ class GameTeamPlayerView(discord.ui.View):
                 await interaction.response.edit_message(content = f"Select a Player", view = self)
             else:
                 self.replace_player_dropdown(self.blankPlayerDropdown)
-                self.playerDropdown.placeholder = f"No valid Players for {teamDropdown.team}"
+                self.playerDropdown.placeholder = f"No valid Players for {teamDropdown.team.name}"
 
-                await interaction.response.edit_message(content = f"No valid Players for {teamDropdown.team}", view = self)
+                await interaction.response.edit_message(content = f"No valid Players for {teamDropdown.team.name}", view = self)
         else:
             await interaction.response.edit_message(content = f"Failed to get Players, please try again or contact the Devs", view = None)
 
     async def confirm_callback(self, view, interaction):
+        if(self.action != None):
+            await self.action(self.gameDropdown.selected, self.teamDropdown.team, self.playerDropdown.player, interaction)
+        else:
+            await interaction.response.edit_message(content="Done!", view=None)
+        """
         status, response = await sendPost(f"AddPlayerToTeam?TeamID={self.teamDropdown.selected}&PlayerID={self.playerDropdown.selected}", None)
         if(status == 200):
             print(f"{interaction.user.name} added {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}")
@@ -623,7 +682,7 @@ class GameTeamPlayerView(discord.ui.View):
             if(response['message'] == "Player already on Team"):
                 await interaction.message.edit(content = f"Player is already on team.", view = None)
             else:
-                await interaction.message.edit(content = f"Failed to add player, please try again or contact the Devs", view = None)
+                await interaction.message.edit(content = f"Failed to add player, please try again or contact the Devs", view = None)"""
 ###########################################################################
 async def sendPost(endpoint, json = None):
     try: #Config var in Heroku
@@ -637,11 +696,12 @@ async def sendPost(endpoint, json = None):
         host = variables["WEBSITE_IP"]
 
     headers = {"Authorization" : headertext}
+    url = f'https://{host}/api/{endpoint}'
     async with httpx.AsyncClient(verify = False) as client:
-        resp = await client.post(f'https://{host}/api/{endpoint}', json = json, headers = headers)
+        resp = await client.post(url, json = json, headers = headers)
         #TODO check for auth failures
         try:
-            print(f'https://{host}/api/{endpoint}: {resp.json()}')
+            print(f'{url}: {resp.json()}')
         except ValueError:
             return resp.status_code, None
         return resp.status_code, resp.json()["value"]
