@@ -8,10 +8,15 @@ from dateutil import parser
 import httpx
 from discord.ext import commands, bridge
 
-CalendarNames = ["General", "League of Legends", "Valorant", "Rainbow 6", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
+GameNames = ["League of Legends", "Valorant", "Rainbow 6", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
 GameOptions = []
-for label in CalendarNames:
+for label in GameNames:
     GameOptions.append(discord.SelectOption(label=label))
+
+CalendarNames = ["General", "League of Legends", "Valorant", "Rainbow 6", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
+CalendarOptions = []
+for label in CalendarNames:
+    CalendarOptions.append(discord.SelectOption(label=label))
 
 class Website(commands.Cog):
     def __init__(self, bot):
@@ -113,6 +118,49 @@ class Website(commands.Cog):
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Delete Event error: ", error)
             raise error
+###################################################################################
+    @discord.slash_command(description = "Creates a Team on the Website", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def createteam(
+        self,
+        ctx,
+        game:discord.Option(str, "Choose what game you want to create a team for", choices = GameNames),
+        name:discord.Option(str, "Enter the name of the team to create")
+    ):
+        await ctx.defer()
+        logEmbed = discord.Embed(title = "New Team", color = discord.Color.teal())
+
+        data = {
+            "Name": name,
+            "Game": game
+        }
+        status, response = await sendPost("NewTeam", data)
+
+        if(status == 200):
+            print(f"{ctx.user.name} Created a {game} team: {name}")
+            logEmbed.add_field(name=("*Name*"),value = name, inline=False)
+            logEmbed.add_field(name=("*Game*"),value = game, inline=False)
+
+            await ctx.respond(embed = logEmbed)
+        else:
+            if(response['message'] == 'Duplicate Team Name'):
+                await ctx.respond(content = "A team with that name already exists!")
+            else:
+                await ctx.respond(content = "Failed to create team")
+
+
+    @createteam.error
+    async def createteam_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /createteam \"<game>\" \"<name>\"", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use createteam")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Create Team error: ", error)
+            raise error
+
 ###########################################################################
 class EventDropdown(discord.ui.Select):
     def __init__(self, events):
@@ -258,6 +306,7 @@ async def sendPost(endpoint, json = None):
     headers = {"Authorization" : headertext}
     async with httpx.AsyncClient(verify = False) as client:
         resp = await client.post(f'https://{host}/api/{endpoint}', json = json, headers = headers)
+        #TODO check for auth failures
         try:
             print(resp.json())
         except ValueError:
