@@ -106,7 +106,6 @@ class Website(commands.Cog):
         else:
             await ctx.respond(content = "Failed to get events")
 
-
     @deleteevent.error
     async def deleteevent_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
@@ -148,7 +147,6 @@ class Website(commands.Cog):
             else:
                 await ctx.respond(content = "Failed to create team")
 
-
     @createteam.error
     async def createteam_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
@@ -188,7 +186,6 @@ class Website(commands.Cog):
         else:
             await ctx.respond(content = "Failed to create team")
 
-
     @createplayer.error
     async def createplayer_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
@@ -199,6 +196,54 @@ class Website(commands.Cog):
         else:
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Create Player error: ", error)
+            raise error
+###########################################################################
+    @discord.slash_command(description = "Adds a Player to a Team", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def addplayer(self, ctx, game:discord.Option(str, "Choose what game you want to edit teams for", choices = GameNames)):
+        await ctx.defer()
+
+        teams = []
+        players = []
+        status, data = await sendPost(f"GetTeams?GameName={game}")
+
+        if(status == 200):
+            if(len(data) > 0):
+                for teamData in data:
+                    teams.append(Team(teamData))
+            else:
+                await ctx.respond(content = "No teams exist for that game")
+                return
+        else:
+            await ctx.respond(content = "Failed to get teams")
+            return
+        
+        status, data = await sendPost(f"GetPlayers")
+
+        if(status == 200):
+            if(len(data) > 0):
+                for playerData in data:
+                    players.append(Player(playerData))
+            else:
+                await ctx.respond(content = "No players exist")
+                return
+        else:
+            await ctx.respond(content = "Failed to get players")
+            return
+
+        
+        await ctx.respond("Select the Team and Player", view=AddPlayerView(teams, players))
+    
+    @addplayer.error
+    async def addplayer_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /addplayer \"<game>\"", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use addplayer")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Add Player error: ", error)
             raise error
 ###########################################################################
 class EventDropdown(discord.ui.Select):
@@ -331,6 +376,83 @@ class InhouseView(discord.ui.View):
         await interaction.message.delete()
 
 ###########################################################################
+class PlayerDropdown(discord.ui.Select):
+    def __init__(self, players):
+        self.players = players
+        self.player = None;
+        self.selected = -1
+        self.playerOptions = []
+        for player in self.players:
+            self.playerOptions.append(discord.SelectOption(label=f"{player.tag} - {player.name}", value=str(player.id)))
+
+        super().__init__(
+            placeholder = "Choose a Player", 
+            min_values = 1,
+            max_values = 1,
+            options = self.playerOptions
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        self.selected = self.values[0]
+        self.player = discord.utils.get(self.players, id=int(self.selected))
+        await interaction.response.defer()
+###########################################################################
+class TeamDropdown(discord.ui.Select):
+    def __init__(self, teams):
+        self.teams = teams
+        self.team = None;
+        self.selected = -1
+        self.teamOptions = []
+        for team in self.teams:
+            self.teamOptions.append(discord.SelectOption(label=team.name, value=str(team.id)))
+
+        super().__init__(
+            placeholder = "Choose a Team", # the placeholder text that will be displayed if nothing is selected
+            min_values = 1,
+            max_values = 1,
+            options = self.teamOptions
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        self.selected = self.values[0]
+        self.team = discord.utils.get(self.teams, id=int(self.selected))
+        await interaction.response.defer()
+###########################################################################
+class AddPlayerView(discord.ui.View):
+    def __init__(self, teams, players):
+        super().__init__()
+        self.teams = teams
+        self.teamDropdown = TeamDropdown(teams)
+        self.playerDropdown = PlayerDropdown(players)
+
+        self.add_item(self.teamDropdown)
+        self.add_item(self.playerDropdown)
+
+    @discord.ui.button(row=2,label="Confirm", style=discord.ButtonStyle.success, emoji="✅")
+    async def confirm_callback(self, button, interaction):
+        complete = True
+        for child in self.children: # loop through all the children of the view
+            if(hasattr(child, "values") and len(child.values) == 0):
+                complete = False
+
+        if complete:
+            status, response = await sendPost(f"AddPlayerToTeam?TeamID={self.teamDropdown.selected}&PlayerID={self.playerDropdown.selected}", None)
+            if(status == 200):
+                print(f"{interaction.user.name} added {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}")
+                await interaction.message.edit(content = f"Added Player {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}", view = None)
+            else:
+                if(response['message'] == "Player already on Team"):
+                    await interaction.message.edit(content = f"Player is already on team.", view = None)
+                else:
+                    await interaction.message.edit(content = f"Failed to add player, please try again or contact the Devs", view = None)
+        else:
+            await interaction.message.edit(content = "Select the Team and Player.")
+
+    @discord.ui.button(row=2,label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
+    async def cancel_callback(self, button, interaction):
+        await interaction.message.delete()
+
+###########################################################################
 async def sendPost(endpoint, json = None):
     try: #Config var in Heroku
         headertext = f'apikey {os.environ["APIKEY"]}&name {os.environ["BOT_NAME"]}'
@@ -344,10 +466,10 @@ async def sendPost(endpoint, json = None):
 
     headers = {"Authorization" : headertext}
     async with httpx.AsyncClient(verify = False) as client:
-        resp = await client.post(f'https://{host}/api/{endpoint}', json = json, headers = headers)
+        resp = await client.post(f'http://{host}/api/{endpoint}', json = json, headers = headers)
         #TODO check for auth failures
         try:
-            print(resp.json())
+            print(f'https://{host}/api/{endpoint}: {resp.json()}')
         except ValueError:
             return resp.status_code, None
         return resp.status_code, resp.json()["value"]
@@ -361,3 +483,14 @@ class Event():
         self.title=json["title"]
         self.location = json["location"]
         self.start = parser.parse(json["start"])
+
+class Team():
+    def __init__(self, json):
+        self.id = json["id"]
+        self.name = json["name"]
+
+class Player():
+    def __init__(self, json):
+        self.id = json["id"]
+        self.name = json["name"]
+        self.tag = json["screenName"]
