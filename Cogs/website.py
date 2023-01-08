@@ -160,7 +160,46 @@ class Website(commands.Cog):
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Create Team error: ", error)
             raise error
+###################################################################################
+    @discord.slash_command(description = "Creates a Player on the Website", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def createplayer(
+        self,
+        ctx,
+        name:discord.Option(str, "Enter the real name of the player"),
+        tag:discord.Option(str, "Enter the screen name of the player")
+    ):
+        await ctx.defer()
+        logEmbed = discord.Embed(title = "New Player", color = discord.Color.teal())
 
+        #TODO maybe add duplicate checking
+
+        data = {
+            "Name": name,
+            "ScreenName": tag
+        }
+        status, response = await sendPost("NewPlayer", data)
+        if(status == 200):
+            print(f"{ctx.user.name} added a player: {name}, '{tag}'")
+            logEmbed.add_field(name=("*Name*"),value = name, inline=False)
+            logEmbed.add_field(name=("*Tag*"),value = tag, inline=False)
+
+            await ctx.respond(embed = logEmbed)
+        else:
+            await ctx.respond(content = "Failed to create team")
+
+
+    @createplayer.error
+    async def createplayer_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /createplayer \"<name>\" \"<tag>\"", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use createplayer")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Create Player error: ", error)
+            raise error
 ###########################################################################
 class EventDropdown(discord.ui.Select):
     def __init__(self, events):
