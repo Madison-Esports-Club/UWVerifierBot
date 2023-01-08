@@ -7,13 +7,14 @@ from datetime import datetime
 from dateutil import parser
 import httpx
 from discord.ext import commands, bridge
+from collections.abc import Callable, Awaitable
 
-GameNames = ["League of Legends", "Valorant", "Rainbow 6", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
+GameNames = ["League of Legends", "Valorant", "Rainbow Six Seige", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
 GameOptions = []
 for label in GameNames:
     GameOptions.append(discord.SelectOption(label=label))
 
-CalendarNames = ["General", "League of Legends", "Valorant", "Rainbow 6", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
+CalendarNames = ["General", "League of Legends", "Valorant", "Rainbow Six Seige", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
 CalendarOptions = []
 for label in CalendarNames:
     CalendarOptions.append(discord.SelectOption(label=label))
@@ -200,39 +201,8 @@ class Website(commands.Cog):
 ###########################################################################
     @discord.slash_command(description = "Adds a Player to a Team", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def addplayer(self, ctx, game:discord.Option(str, "Choose what game you want to edit teams for", choices = GameNames)):
-        await ctx.defer()
-
-        teams = []
-        players = []
-        status, data = await sendPost(f"GetTeams?GameName={game}")
-
-        if(status == 200):
-            if(len(data) > 0):
-                for teamData in data:
-                    teams.append(Team(teamData))
-            else:
-                await ctx.respond(content = "No teams exist for that game")
-                return
-        else:
-            await ctx.respond(content = "Failed to get teams")
-            return
-        
-        status, data = await sendPost(f"GetPlayers")
-
-        if(status == 200):
-            if(len(data) > 0):
-                for playerData in data:
-                    players.append(Player(playerData))
-            else:
-                await ctx.respond(content = "No players exist")
-                return
-        else:
-            await ctx.respond(content = "Failed to get players")
-            return
-
-        
-        await ctx.respond("Select the Team and Player", view=AddPlayerView(teams, players))
+    async def addplayer(self, ctx):
+        await ctx.respond("Select the Team and Player", view=GameTeamPlayerView())
     
     @addplayer.error
     async def addplayer_error(self, ctx, error):
@@ -374,18 +344,23 @@ class InhouseView(discord.ui.View):
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
     async def cancel_callback(self, button, interaction):
         await interaction.message.delete()
-
 ###########################################################################
 class PlayerDropdown(discord.ui.Select):
-    def __init__(self, players):
+    """
+    Creates a dropdown with the specified list of players
+    An action can be specified to be called when the value is changed.
+    """
+    def __init__(self, players:list["Player"], action:Callable[[discord.ui.View, "PlayerDropdown", discord.Interaction], Awaitable[None]] = None, row: int = None):
         self.players = players
-        self.player = None;
+        self.player = None
         self.selected = -1
         self.playerOptions = []
         for player in self.players:
             self.playerOptions.append(discord.SelectOption(label=f"{player.tag} - {player.name}", value=str(player.id)))
-
+        
+        self.action = action
         super().__init__(
+            row = row,
             placeholder = "Choose a Player", 
             min_values = 1,
             max_values = 1,
@@ -395,19 +370,30 @@ class PlayerDropdown(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         self.selected = self.values[0]
         self.player = discord.utils.get(self.players, id=int(self.selected))
-        await interaction.response.defer()
+        if(self.action != None):
+            await self.action(self.view, self, interaction)
+        else:
+            await interaction.response.defer()
 ###########################################################################
 class TeamDropdown(discord.ui.Select):
-    def __init__(self, teams):
+    """
+    Creates a dropdown with the specified list of teams
+    An action can be specified to be called when the value is changed.
+
+    The default value Option is the id of the team that should be selected by default
+    """
+    def __init__(self, teams:list["Team"], action:Callable[[discord.ui.View, "TeamDropdown", discord.Interaction], Awaitable[None]] = None, row: int = None, defaultValue:int=-1):
         self.teams = teams
-        self.team = None;
-        self.selected = -1
+        self.team = discord.utils.get(teams, id=defaultValue)
+        self.selected = defaultValue
         self.teamOptions = []
         for team in self.teams:
-            self.teamOptions.append(discord.SelectOption(label=team.name, value=str(team.id)))
-
+            self.teamOptions.append(discord.SelectOption(label=team.name, value=str(team.id),default = (team.id == defaultValue)))
+        
+        self.action = action
         super().__init__(
-            placeholder = "Choose a Team", # the placeholder text that will be displayed if nothing is selected
+            row = row,
+            placeholder = "Choose a Team",
             min_values = 1,
             max_values = 1,
             options = self.teamOptions
@@ -416,42 +402,228 @@ class TeamDropdown(discord.ui.Select):
     async def callback(self, interaction: discord.Interaction):
         self.selected = self.values[0]
         self.team = discord.utils.get(self.teams, id=int(self.selected))
-        await interaction.response.defer()
+        if(self.action != None):
+            await self.action(self.view, self, interaction)
+        else:
+            await interaction.response.defer()
 ###########################################################################
-class AddPlayerView(discord.ui.View):
-    def __init__(self, teams, players):
-        super().__init__()
-        self.teams = teams
-        self.teamDropdown = TeamDropdown(teams)
-        self.playerDropdown = PlayerDropdown(players)
+class GameDropdown(discord.ui.Select):
+    """
+    Creates a dropdown with the list of games supported.
+    An action can be specified to be called when the value is changed.
+    """
+    def __init__(self, action:Callable[[discord.ui.View, "GameDropdown", discord.Interaction], Awaitable[None]] = None, row:int = None, defaultValue:str = None):
+        self.action = action
 
-        self.add_item(self.teamDropdown)
-        self.add_item(self.playerDropdown)
+        # If we have a default, we have to make a new set of options.
+        options = GameOptions
+        if defaultValue in GameNames:
+            options = []
+            for label in GameNames:
+                options.append(discord.SelectOption(label=label))
+        
+        super().__init__(
+            row = row,
+            placeholder = "Choose a Game", # the placeholder text that will be displayed if nothing is selected
+            min_values = 1,
+            max_values = 1,
+            options = options
+        )
+        for option in self.options:
+            if option.label == defaultValue:
+                option.default = True
 
-    @discord.ui.button(row=2,label="Confirm", style=discord.ButtonStyle.success, emoji="✅")
-    async def confirm_callback(self, button, interaction):
+    async def callback(self, interaction: discord.Interaction):
+        self.selected = self.values[0]
+        self.game = self.values[0]
+        if(self.action != None):
+            await self.action(self.view, self, interaction)
+        else:
+            await interaction.response.defer()
+###########################################################################
+class ConfirmButton(discord.ui.Button):
+    """
+    Creates a confirm button which will perform the specified action when clicked
+    if and only if all selects in the parentView have a value selected
+
+    The action will receive the view this buttton is attached to, and the interaction that spawned it.
+    """
+    def __init__(self, action:Callable[[discord.ui.View, discord.Interaction], Awaitable[None]], row:int = None):
+        self.action = action
+        super().__init__(
+            row = row,
+            label="Confirm",
+            style=discord.ButtonStyle.success,
+            emoji="✅"
+        )
+
+    async def callback(self, interaction: discord.Interaction):
         complete = True
-        for child in self.children: # loop through all the children of the view
-            if(hasattr(child, "values") and len(child.values) == 0):
-                complete = False
+        for child in self.view.children: # loop through all the children of the view
+            if(hasattr(child, "values")):
+                if(len(child.values) > 0): # if theres a value, its fine
+                    continue
+                else: # otherwise we have to check if a default was set (WHY THE FUCK DOES DEFUALT NOT SHOW UP IN VALUES!!!HOW WOULD YOU KNOW WITHOUT LOOPING THROUGH THEM ALLL)
+                    defaultValue = False
+                    for opt in child.options:
+                        if opt.default:
+                            defaultValue = True
+                            break
+                    if not defaultValue:
+                        complete = False
 
         if complete:
-            status, response = await sendPost(f"AddPlayerToTeam?TeamID={self.teamDropdown.selected}&PlayerID={self.playerDropdown.selected}", None)
-            if(status == 200):
-                print(f"{interaction.user.name} added {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}")
-                await interaction.message.edit(content = f"Added Player {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}", view = None)
-            else:
-                if(response['message'] == "Player already on Team"):
-                    await interaction.message.edit(content = f"Player is already on team.", view = None)
-                else:
-                    await interaction.message.edit(content = f"Failed to add player, please try again or contact the Devs", view = None)
+            await self.action(self.view, interaction)
         else:
-            await interaction.message.edit(content = "Select the Team and Player.")
+            await interaction.response.defer()
+###########################################################################
+class CancelButton(discord.ui.Button):
+    """
+    Creates a cancel button which will close the current view when clicked
+    """
+    def __init__(self, row:int = None):
+        super().__init__(
+            row = row,
+            label="Cancel",
+            style=discord.ButtonStyle.danger,
+            emoji="❌"
+        )
 
-    @discord.ui.button(row=2,label="Cancel", style=discord.ButtonStyle.danger, emoji="❌")
-    async def cancel_callback(self, button, interaction):
+    async def callback(self, interaction: discord.Interaction):
         await interaction.message.delete()
+###########################################################################
+class GameTeamPlayerView(discord.ui.View):
+    """
+    Creates a view which shows 3 selects, one for game, one for team, one for player.
+    Selecting a new value on any select will clear and repopulate the ones below
 
+    Customization options:
+    include_empty_teams: TODO
+        Sets whether teams with no players will show up in the team selector
+            e.g. if you are removing players, this should be false.
+        Defaults to True
+    
+    show_players_on_team: TODO
+        Sets whether the player dropdown will show only players on the team or only those not on the team
+            e.g. if you are removing players this should be true
+        Defaults to False
+    
+    action: TODO
+        Callback to be called when all three values are filled out and confirm is pressed.
+    """
+    def __init__(self):
+        super().__init__()
+        self.gameDropdown = GameDropdown(self.game_callback, 0)
+
+        # Create a blank dropdown for when we need to clear it
+        self.blankTeamDropdown = TeamDropdown([Team({"id":0,"name":"Placeholder"})], self.team_callback, 1)
+        self.blankTeamDropdown.placeholder = "Select a Game First"
+        self.blankTeamDropdown.disabled = True
+        self.teamDropdown = self.blankTeamDropdown
+
+        # Create a blank dropdown for when we need to clear it
+        self.blankPlayerDropdown = PlayerDropdown([Player({"id":0,"name":"Placeholder","screenName":"Placeholder"})], None, 2)
+        self.blankPlayerDropdown.placeholder = "Select a Team First"
+        self.blankPlayerDropdown.disabled = True
+        self.playerDropdown = self.blankPlayerDropdown
+
+        self.add_item(self.gameDropdown)
+        self.add_item(self.teamDropdown)
+        self.add_item(self.playerDropdown)
+        self.add_item(ConfirmButton(self.confirm_callback, 3))
+        self.add_item(CancelButton(3))
+
+
+    """
+    Method to replace the game dropdown
+    """
+    def replace_game_dropdown(self, dropdown: GameDropdown):
+        self.remove_item(self.gameDropdown)
+        self.gameDropdown = dropdown
+        self.add_item(self.gameDropdown)
+
+    """
+    Method to replace the team dropdown
+    """
+    def replace_team_dropdown(self, dropdown: TeamDropdown):
+        self.remove_item(self.teamDropdown)
+        self.teamDropdown = dropdown
+        self.add_item(self.teamDropdown)
+
+    """
+    Method to replace the player dropdown
+    """
+    def replace_player_dropdown(self, dropdown: PlayerDropdown):
+        self.remove_item(self.playerDropdown)
+        self.playerDropdown = dropdown
+        self.add_item(self.playerDropdown)
+
+    """
+    Callback for when a game is selected
+    Attempts to load the teams and populate the team dropdown
+    Clears out the Player dropdown
+    """
+    async def game_callback(self, view:discord.ui.View, gameDropdown: GameDropdown, interaction:discord.Interaction):
+        self.replace_player_dropdown(self.blankPlayerDropdown)
+
+        teams = []
+        status, data = await sendPost(f"GetTeams?GameName={gameDropdown.game}")
+
+        if(status == 200):
+            self.replace_game_dropdown(GameDropdown(self.game_callback, 0, gameDropdown.game))
+
+            if(len(data) > 0):
+                for teamData in data:
+                    teams.append(Team(teamData))
+
+                self.replace_team_dropdown(TeamDropdown(teams, self.team_callback, 1))
+
+                await interaction.message.edit(content = f"Select a Team from {gameDropdown.game}", view = self)
+            else:
+                self.replace_team_dropdown(self.blankTeamDropdown)
+                self.teamDropdown.placeholder = f"No Teams for {gameDropdown.game}"
+
+                await interaction.response.edit_message(content = f"No Teams exist for {gameDropdown.game}", view = self)
+                return
+        else:
+            await interaction.message.edit(content = f"Failed to get Teams, please try again or contact the Devs", view = None)
+            return
+
+        await interaction.response.defer()
+
+    async def team_callback(self, view:discord.ui.View, teamDropdown: TeamDropdown, interaction:discord.Interaction):
+        players = []
+        ##TODO add exclusion/inclusion based on if the player is in the team
+        status, data = await sendPost(f"GetPlayers")
+
+        if(status == 200):
+            self.replace_team_dropdown(TeamDropdown(teamDropdown.teams, self.team_callback, 1, int(teamDropdown.selected)))
+
+            if(len(data) > 0):
+                for playersData in data:
+                    players.append(Player(playersData))
+
+                self.replace_player_dropdown(PlayerDropdown(players, None, 2))
+
+                await interaction.response.edit_message(content = f"Select a Player", view = self)
+            else:
+                self.replace_player_dropdown(self.blankPlayerDropdown)
+                self.playerDropdown.placeholder = f"No valid Players for {teamDropdown.team}"
+
+                await interaction.response.edit_message(content = f"No valid Players for {teamDropdown.team}", view = self)
+        else:
+            await interaction.response.edit_message(content = f"Failed to get Players, please try again or contact the Devs", view = None)
+
+    async def confirm_callback(self, view, interaction):
+        status, response = await sendPost(f"AddPlayerToTeam?TeamID={self.teamDropdown.selected}&PlayerID={self.playerDropdown.selected}", None)
+        if(status == 200):
+            print(f"{interaction.user.name} added {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}")
+            await interaction.message.edit(content = f"Added Player {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}", view = None)
+        else:
+            if(response['message'] == "Player already on Team"):
+                await interaction.message.edit(content = f"Player is already on team.", view = None)
+            else:
+                await interaction.message.edit(content = f"Failed to add player, please try again or contact the Devs", view = None)
 ###########################################################################
 async def sendPost(endpoint, json = None):
     try: #Config var in Heroku
@@ -466,7 +638,7 @@ async def sendPost(endpoint, json = None):
 
     headers = {"Authorization" : headertext}
     async with httpx.AsyncClient(verify = False) as client:
-        resp = await client.post(f'http://{host}/api/{endpoint}', json = json, headers = headers)
+        resp = await client.post(f'https://{host}/api/{endpoint}', json = json, headers = headers)
         #TODO check for auth failures
         try:
             print(f'https://{host}/api/{endpoint}: {resp.json()}')
