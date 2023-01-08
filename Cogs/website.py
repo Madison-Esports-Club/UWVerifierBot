@@ -160,6 +160,34 @@ class Website(commands.Cog):
             print("Create Team error: ", error)
             raise error
 ###################################################################################
+    @discord.slash_command(description = "Deletes a Team from the Website", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def deleteteam(self, ctx):
+        await ctx.defer()
+
+        async def delete_team_callback(gameName:str, team:Team, interaction:discord.Interaction) -> None:
+            status, response = await sendPost(f"DeleteTeam?TeamID={team.id}", None)
+            if(status == 200):
+                print(f"{interaction.user.name} deleted {gameName} Team {team.name}")
+                await interaction.message.edit(content = f"Deleted {gameName} Team {team.name}", view = None)
+            else:
+                if(response['message'] == "Invalid Team ID"):
+                    await interaction.message.edit(content = f"Team does not exist", view = None)
+                else:
+                    await interaction.message.edit(content = f"Failed to delete team, please try again or contact the Devs", view = None)
+        
+        await ctx.respond("Select the Team to delete", view=GameTeamView(action = delete_team_callback))
+    
+    @deleteteam.error
+    async def deleteteam_error(self, ctx, error):
+        if isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use deleteteam")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Delete Team error: ", error)
+            raise error
+###########################################################################
     @discord.slash_command(description = "Creates a Player on the Website", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def createplayer(
@@ -673,16 +701,93 @@ class GameTeamPlayerView(discord.ui.View):
             await self.action(self.gameDropdown.selected, self.teamDropdown.team, self.playerDropdown.player, interaction)
         else:
             await interaction.response.edit_message(content="Done!", view=None)
-        """
-        status, response = await sendPost(f"AddPlayerToTeam?TeamID={self.teamDropdown.selected}&PlayerID={self.playerDropdown.selected}", None)
+###########################################################################
+class GameTeamView(discord.ui.View):
+    """
+    Creates a view which shows 2 selects, one for game, one for team
+    Selecting a new value on the game select will clear and repopulate the team select
+
+    Customization options:
+    include_empty_teams: TODO
+        Sets whether teams with no players will show up in the team selector
+
+        Defaults to True
+    
+    action:
+        Callback to be called when both values are selected and confirm is pressed.
+        Method should take 3 arguments and be async:
+            action(Game:str, TeamID: int, interaction: discord.Interaction)
+
+    """
+    def __init__(self, action:Callable[[str, "Team", discord.Interaction], Awaitable[None]] = None, *, include_empty_teams=True):
+        super().__init__()
+        self.action = action
+        self.includeEmptyTeams = include_empty_teams
+
+        self.gameDropdown = GameDropdown(self.game_callback, 0)
+
+        # Create a blank dropdown for when we need to clear it
+        self.blankTeamDropdown = TeamDropdown([Team({"id":0,"name":"Placeholder"})], None, 1)
+        self.blankTeamDropdown.placeholder = "Select a Game First"
+        self.blankTeamDropdown.disabled = True
+        self.teamDropdown = self.blankTeamDropdown
+
+        self.add_item(self.gameDropdown)
+        self.add_item(self.teamDropdown)
+        self.add_item(ConfirmButton(self.confirm_callback, 2))
+        self.add_item(CancelButton(2))
+
+    """
+    Method to replace the game dropdown
+    """
+    def replace_game_dropdown(self, dropdown: GameDropdown):
+        self.remove_item(self.gameDropdown)
+        self.gameDropdown = dropdown
+        self.add_item(self.gameDropdown)
+
+    """
+    Method to replace the team dropdown
+    """
+    def replace_team_dropdown(self, dropdown: TeamDropdown):
+        self.remove_item(self.teamDropdown)
+        self.teamDropdown = dropdown
+        self.add_item(self.teamDropdown)
+
+    """
+    Callback for when a game is selected
+    Attempts to load the teams and populate the team dropdown
+    """
+    async def game_callback(self, view:discord.ui.View, gameDropdown: GameDropdown, interaction:discord.Interaction):
+        teams = []
+        status, data = await sendPost(f"GetTeams?GameName={gameDropdown.game}")
+
         if(status == 200):
-            print(f"{interaction.user.name} added {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}")
-            await interaction.message.edit(content = f"Added Player {self.playerDropdown.player.tag} to {self.teamDropdown.team.name}", view = None)
-        else:
-            if(response['message'] == "Player already on Team"):
-                await interaction.message.edit(content = f"Player is already on team.", view = None)
+            self.replace_game_dropdown(GameDropdown(self.game_callback, 0, gameDropdown.game))
+
+            if(len(data) > 0):
+                for teamData in data:
+                    teams.append(Team(teamData))
+
+                self.replace_team_dropdown(TeamDropdown(teams, None, 1))
+
+                await interaction.message.edit(content = f"Select a Team from {gameDropdown.game}", view = self)
             else:
-                await interaction.message.edit(content = f"Failed to add player, please try again or contact the Devs", view = None)"""
+                self.replace_team_dropdown(self.blankTeamDropdown)
+                self.teamDropdown.placeholder = f"No Teams for {gameDropdown.game}"
+
+                await interaction.response.edit_message(content = f"No Teams exist for {gameDropdown.game}", view = self)
+                return
+        else:
+            await interaction.message.edit(content = f"Failed to get Teams, please try again or contact the Devs", view = None)
+            return
+
+        await interaction.response.defer()
+
+    async def confirm_callback(self, view, interaction):
+        if(self.action != None):
+            await self.action(self.gameDropdown.selected, self.teamDropdown.team, interaction)
+        else:
+            await interaction.response.edit_message(content="Done!", view=None)
 ###########################################################################
 async def sendPost(endpoint, json = None):
     try: #Config var in Heroku
