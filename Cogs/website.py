@@ -10,7 +10,7 @@ from discord.ext import commands, bridge
 from collections.abc import Callable, Awaitable
 
 from Cogs.Helpers.autocompleteHelpers import create_player_autocomplete, create_team_autocomplete
-from Cogs.Helpers.websiteHelpers import PlayerCache, TeamCache
+from Cogs.Helpers.websiteHelpers import PlayerCache, TeamCache, sendPost
 
 team_cache = TeamCache(timedelta(0,120))
 player_cache = PlayerCache(timedelta(0,120))
@@ -795,28 +795,6 @@ class GameTeamView(discord.ui.View):
             await self.action(self.gameDropdown.selected, self.teamDropdown.team, interaction)
         else:
             await interaction.response.edit_message(content="Done!", view=None)
-###########################################################################
-async def sendPost(endpoint, json = None):
-    try: #Config var in Heroku
-        headertext = f'apikey {os.environ["APIKEY"]}&name {os.environ["BOT_NAME"]}'
-        host = os.environ["WEBSITE_IP"]
-    except: #Runs from system
-        config_object = ConfigParser()
-        config_object.read("BotVariables.ini")
-        variables = config_object["variables"]
-        headertext = f'apikey {variables["APIKEY"]}&name {variables["BOT_NAME"]}'
-        host = variables["WEBSITE_IP"]
-
-    headers = {"Authorization" : headertext}
-    url = f'https://{host}/api/{endpoint}'
-    async with httpx.AsyncClient(verify = False) as client:
-        resp = await client.post(url, json = json, headers = headers)
-        #TODO check for auth failures
-        try:
-            print(f'{url}: {resp.json()}')
-        except ValueError:
-            return resp.status_code, None
-        return resp.status_code, resp.json()["value"]
 ###########################################################################
 def setup(bot):
     bot.add_cog(Website(bot))
