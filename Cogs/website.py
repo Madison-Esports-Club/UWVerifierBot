@@ -71,7 +71,6 @@ class Website(commands.Cog):
         else:
             await ctx.respond(content = "Failed to create event")
 
-
     @createevent.error
     async def createevent_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
@@ -598,13 +597,13 @@ class GameTeamPlayerView(discord.ui.View):
         self.gameDropdown = GameDropdown(self.game_callback, 0)
 
         # Create a blank dropdown for when we need to clear it
-        self.blankTeamDropdown = TeamDropdown([Team({"id":0,"name":"Placeholder"})], self.team_callback, 1)
+        self.blankTeamDropdown = TeamDropdown([Team({"id":0, "name":"Placeholder"})], self.team_callback, 1)
         self.blankTeamDropdown.placeholder = "Select a Game First"
         self.blankTeamDropdown.disabled = True
         self.teamDropdown = self.blankTeamDropdown
 
         # Create a blank dropdown for when we need to clear it
-        self.blankPlayerDropdown = PlayerDropdown([Player({"id":0,"name":"Placeholder","screenName":"Placeholder"})], None, 2)
+        self.blankPlayerDropdown = PlayerDropdown([Player({"id":0, "name":"Placeholder", "screenName":"Placeholder"})], None, 2)
         self.blankPlayerDropdown.placeholder = "Select a Team First"
         self.blankPlayerDropdown.disabled = True
         self.playerDropdown = self.blankPlayerDropdown
@@ -648,32 +647,23 @@ class GameTeamPlayerView(discord.ui.View):
     async def game_callback(self, view:discord.ui.View, gameDropdown: GameDropdown, interaction:discord.Interaction):
         self.replace_player_dropdown(self.blankPlayerDropdown)
 
-        teams = []
-        status, data = await sendPost(f"GetTeams?GameName={gameDropdown.game}")
+        teams = await team_cache.get_all_teams(gameDropdown.game)
+        self.replace_game_dropdown(GameDropdown(self.game_callback, 0, gameDropdown.game))
+        if(len(teams) > 0):
+            # TODO truncate to 25
+            self.replace_team_dropdown(TeamDropdown(teams, self.team_callback, 1))
 
-        if(status == 200):
-            self.replace_game_dropdown(GameDropdown(self.game_callback, 0, gameDropdown.game))
-
-            if(len(data) > 0):
-                for teamData in data:
-                    teams.append(Team(teamData)) # TODO truncate to 25
-
-                self.replace_team_dropdown(TeamDropdown(teams, self.team_callback, 1))
-
-                await interaction.message.edit(content = f"Select a Team from {gameDropdown.game}", view = self)
-            else:
-                self.replace_team_dropdown(self.blankTeamDropdown)
-                self.teamDropdown.placeholder = f"No Teams for {gameDropdown.game}"
-
-                await interaction.response.edit_message(content = f"No Teams exist for {gameDropdown.game}", view = self)
-                return
+            await interaction.response.edit_message(content = f"Select a Team from {gameDropdown.game}", view = self)
+            return
         else:
-            await interaction.message.edit(content = f"Failed to get Teams, please try again or contact the Devs", view = None)
+            self.replace_team_dropdown(self.blankTeamDropdown)
+            self.teamDropdown.placeholder = f"No Teams for {gameDropdown.game}"
+
+            await interaction.response.edit_message(content = f"No Teams found for {gameDropdown.game}", view = self)
             return
 
-        await interaction.response.defer()
-
     async def team_callback(self, view:discord.ui.View, teamDropdown: TeamDropdown, interaction:discord.Interaction):
+        # TODO cache this somehow
         players = []
         endpoint = "GetPlayers"
         if self.showTeamPlayers:
@@ -763,30 +753,20 @@ class GameTeamView(discord.ui.View):
     Attempts to load the teams and populate the team dropdown
     """
     async def game_callback(self, view:discord.ui.View, gameDropdown: GameDropdown, interaction:discord.Interaction):
-        teams = []
-        status, data = await sendPost(f"GetTeams?GameName={gameDropdown.game}")
+        teams = await team_cache.get_all_teams(gameDropdown.game)
+        self.replace_game_dropdown(GameDropdown(self.game_callback, 0, gameDropdown.game))
+        if(len(teams) > 0):
+            # TODO truncate to 25
+            self.replace_team_dropdown(TeamDropdown(teams, None, 1))
 
-        if(status == 200):
-            self.replace_game_dropdown(GameDropdown(self.game_callback, 0, gameDropdown.game))
-
-            if(len(data) > 0):
-                for teamData in data:
-                    teams.append(Team(teamData)) # TODO truncate to 25
-
-                self.replace_team_dropdown(TeamDropdown(teams, None, 1))
-
-                await interaction.message.edit(content = f"Select a Team from {gameDropdown.game}", view = self)
-            else:
-                self.replace_team_dropdown(self.blankTeamDropdown)
-                self.teamDropdown.placeholder = f"No Teams for {gameDropdown.game}"
-
-                await interaction.response.edit_message(content = f"No Teams exist for {gameDropdown.game}", view = self)
-                return
-        else:
-            await interaction.message.edit(content = f"Failed to get Teams, please try again or contact the Devs", view = None)
+            await interaction.response.edit_message(content = f"Select a Team from {gameDropdown.game}", view = self)
             return
+        else:
+            self.replace_team_dropdown(self.blankTeamDropdown)
+            self.teamDropdown.placeholder = f"No Teams for {gameDropdown.game}"
 
-        await interaction.response.defer()
+            await interaction.response.edit_message(content = f"No Teams found for {gameDropdown.game}", view = self)
+            return
 
     async def confirm_callback(self, view, interaction):
         if(self.action != None):

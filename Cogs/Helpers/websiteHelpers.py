@@ -22,7 +22,7 @@ async def sendPost(endpoint, json = None):
         host = variables["WEBSITE_IP"]
 
     headers = {"Authorization" : headertext}
-    url = f'https://{host}/api/{endpoint}'
+    url = f'http://{host}/api/{endpoint}'
     async with httpx.AsyncClient(verify = False) as client:
         resp = await client.post(url, json = json, headers = headers)
         #TODO check for auth failures
