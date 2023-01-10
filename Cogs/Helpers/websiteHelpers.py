@@ -115,8 +115,28 @@ class PlayerCache():
                 return player
         return None
 
-    async def add_player(name: str, tag: str) -> bool:
-        pass
+    """
+    Attempts to create a Player.
+
+    If the server accepts the creation, the player is added to the cache and None is returned
+    Otherwise the failure message is returned.
+    """
+    async def create_player(self, name: str, tag: str) -> Union[str, None]:
+        data = {
+            "Name": name,
+            "ScreenName": tag
+        }
+        status, response = await sendPost("NewPlayer", data)
+
+        if(status == 200):
+            player = Player({"id":response["id"], "name": name, "screenName":tag})
+            print(f"Player created: {player}")
+            self.players.append(player)
+            return None
+        else:
+            return "Failed to create Player"
+
+        #TODO maybe add duplicate checking
 
 class TeamCache():
     """

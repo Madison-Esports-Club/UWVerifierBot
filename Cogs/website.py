@@ -196,22 +196,16 @@ class Website(commands.Cog):
     ):
         await ctx.defer()
         logEmbed = discord.Embed(title = "New Player", color = discord.Color.teal())
+        resp = await player_cache.create_player(name, tag)
 
-        #TODO maybe add duplicate checking
-
-        data = {
-            "Name": name,
-            "ScreenName": tag
-        }
-        status, response = await sendPost("NewPlayer", data)
-        if(status == 200):
+        if(resp == None):
             print(f"{ctx.user.name} created a player: {name}, '{tag}'")
             logEmbed.add_field(name=("*Name*"),value = name, inline=False)
             logEmbed.add_field(name=("*Tag*"),value = tag, inline=False)
 
             await ctx.respond(embed = logEmbed)
         else:
-            await ctx.respond(content = "Failed to create player")
+            await ctx.respond(resp)
 
     @createplayer.error
     async def createplayer_error(self, ctx, error):
