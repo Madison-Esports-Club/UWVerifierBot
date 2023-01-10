@@ -213,13 +213,13 @@ class Website(commands.Cog):
         }
         status, response = await sendPost("NewPlayer", data)
         if(status == 200):
-            print(f"{ctx.user.name} added a player: {name}, '{tag}'")
+            print(f"{ctx.user.name} created a player: {name}, '{tag}'")
             logEmbed.add_field(name=("*Name*"),value = name, inline=False)
             logEmbed.add_field(name=("*Tag*"),value = tag, inline=False)
 
             await ctx.respond(embed = logEmbed)
         else:
-            await ctx.respond(content = "Failed to create team")
+            await ctx.respond(content = "Failed to create player")
 
     @createplayer.error
     async def createplayer_error(self, ctx, error):

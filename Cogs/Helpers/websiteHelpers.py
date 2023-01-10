@@ -3,6 +3,7 @@ import os
 import httpx
 import datetime
 from discord import utils
+import asyncio
 
 from typing import Union
 
@@ -59,27 +60,28 @@ class PlayerCache():
         self.players: list[Player] = []
         self.last_updated = datetime.datetime.min
         self.refresh_interval = refresh
+        self.lock = asyncio.Lock()
     
     async def update_cache(self):
         # Do thread safety
+        async with self.lock:
+            if(self.last_updated + self.refresh_interval < datetime.datetime.now() ):
+                endpoint = "GetPlayers"
+                
+                status, data = await sendPost(endpoint)
 
-        if(self.last_updated + self.refresh_interval < datetime.datetime.now() ):
-            endpoint = "GetPlayers"
-            
-            status, data = await sendPost(endpoint)
+                if(status == 200):
+                    self.last_updated = datetime.datetime.now() # only update if it succeeded.
+                    self.players = []
 
-            if(status == 200):
-                self.last_updated = datetime.datetime.now() # only update if it succeeded.
-                self.players = []
-
-                if(len(data) > 0):
-                    print(f"Caching {len(data)} Players")
-                    for playersData in data:
-                        self.players.append(Player(playersData))
+                    if(len(data) > 0):
+                        print(f"Caching {len(data)} Players")
+                        for playersData in data:
+                            self.players.append(Player(playersData))
+                    else:
+                        print("Warning: No Players retrieved into cache")
                 else:
-                    print("Warning: No Players retrieved into cache")
-            else:
-                print("Error: Failed retrieving Players into cache")
+                    print("Error: Failed retrieving Players into cache")
     
     async def get_all_players(self) -> list[Player]:
         await self.update_cache()
@@ -127,29 +129,30 @@ class TeamCache():
         self.teams: dict[str, list[Team]] = {}
         self.last_updated = datetime.datetime.min
         self.refresh_interval = refresh
+        self.lock = asyncio.Lock()
     
     async def update_cache(self):
         # Do thread safety
+        async with self.lock:
+            if(self.last_updated + self.refresh_interval < datetime.datetime.now() ):
+                for game in GameNames:
+                    endpoint = f"GetTeams?GameName={game}"
+                    
+                    status, data = await sendPost(endpoint)
 
-        if(self.last_updated + self.refresh_interval < datetime.datetime.now() ):
-            for game in GameNames:
-                endpoint = f"GetTeams?GameName={game}"
-                
-                status, data = await sendPost(endpoint)
+                    if(status == 200):
+                        self.last_updated = datetime.datetime.now() # only update if it succeeded.
+                        self.teams[game] = []
 
-                if(status == 200):
-                    self.last_updated = datetime.datetime.now() # only update if it succeeded.
-                    self.teams[game] = []
-
-                    if(len(data) > 0):
-                        print(f"Caching {len(data)} Teams")
-                        for teamData in data:
-                            self.teams[game].append(Team(teamData))
+                        if(len(data) > 0):
+                            print(f"Caching {len(data)} Teams")
+                            for teamData in data:
+                                self.teams[game].append(Team(teamData))
+                        else:
+                            print("Warning: No Teams retrieved into cache")
                     else:
-                        print("Warning: No Teams retrieved into cache")
-                else:
-                    print("Error: Failed retrieving Teams into cache")
-    
+                        print("Error: Failed retrieving Teams into cache")
+
     async def get_all_teams(self, game:str) -> list[Team]:
         await self.update_cache()
 
