@@ -135,24 +135,16 @@ class Website(commands.Cog):
     ):
         await ctx.defer()
         logEmbed = discord.Embed(title = "New Team", color = discord.Color.teal())
+        resp = await team_cache.create_team(name, game)
 
-        data = {
-            "Name": name,
-            "Game": game
-        }
-        status, response = await sendPost("NewTeam", data)
-
-        if(status == 200):
+        if(resp == None):
             print(f"{ctx.user.name} Created a {game} team: {name}")
             logEmbed.add_field(name=("*Name*"),value = name, inline=False)
             logEmbed.add_field(name=("*Game*"),value = game, inline=False)
 
             await ctx.respond(embed = logEmbed)
         else:
-            if(response['message'] == 'Duplicate Team Name'):
-                await ctx.respond(content = "A team with that name already exists!")
-            else:
-                await ctx.respond(content = "Failed to create team")
+            await ctx.respond(content = resp)
 
     @createteam.error
     async def createteam_error(self, ctx, error):

@@ -175,5 +175,30 @@ class TeamCache():
         
         return None
 
-    async def add_team(name: str, game: str) -> bool:
-        pass
+    """
+    Attempts to create a Team.
+
+    If the server accepts the creation, the team is added to the cache and None is returned
+    Otherwise the failure message is returned.
+    """
+    async def create_team(self, name: str, game: str) -> Union[str, None]:
+        # Cache duplicate checking
+        if (await self.get_by_name(name, game)) != None:
+            return "A team with that name already exists!"
+
+        data = {
+            "Name": name,
+            "Game": game
+        }
+        status, response = await sendPost("NewTeam", data)
+
+        if(status == 200):
+            print(f"{game} team created: {name}")
+            team = Team({"id":response["id"], "name": name})
+            self.teams[game].append(team)
+            return None
+        else:
+            if(response['message'] == 'Duplicate Team Name'):
+                return "A team with that name already exists!"
+            else:
+                return "Failed to create team"
