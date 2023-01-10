@@ -10,7 +10,7 @@ from discord.ext import commands, bridge
 from collections.abc import Callable, Awaitable
 
 from Cogs.Helpers.autocompleteHelpers import create_player_autocomplete, create_team_autocomplete
-from Cogs.Helpers.websiteHelpers import PlayerCache, TeamCache, sendPost
+from Cogs.Helpers.websiteHelpers import PlayerCache, TeamCache, sendPost, Player, Team
 
 team_cache = TeamCache(timedelta(0,120))
 player_cache = PlayerCache(timedelta(0,120))
@@ -421,7 +421,7 @@ class PlayerDropdown(discord.ui.Select):
     Creates a dropdown with the specified list of players
     An action can be specified to be called when the value is changed.
     """
-    def __init__(self, players:list["Player"], action:Callable[[discord.ui.View, "PlayerDropdown", discord.Interaction], Awaitable[None]] = None, row: int = None):
+    def __init__(self, players:list[Player], action:Callable[[discord.ui.View, "PlayerDropdown", discord.Interaction], Awaitable[None]] = None, row: int = None):
         self.players = players
         self.player = None
         self.selected = -1
@@ -453,7 +453,7 @@ class TeamDropdown(discord.ui.Select):
 
     The default value Option is the id of the team that should be selected by default
     """
-    def __init__(self, teams:list["Team"], action:Callable[[discord.ui.View, "TeamDropdown", discord.Interaction], Awaitable[None]] = None, row: int = None, defaultValue:int=-1):
+    def __init__(self, teams:list[Team], action:Callable[[discord.ui.View, "TeamDropdown", discord.Interaction], Awaitable[None]] = None, row: int = None, defaultValue:int=-1):
         self.teams = teams
         self.team = discord.utils.get(teams, id=defaultValue)
         self.selected = defaultValue
@@ -588,7 +588,7 @@ class GameTeamPlayerView(discord.ui.View):
             action(Game:str, TeamID: int, PlayerID: int, interaction: discord.Interaction)
 
     """
-    def __init__(self, action:Callable[[str, "Team", "Player", discord.Interaction], Awaitable[None]] = None, *, include_empty_teams=True, show_players_on_team = False):
+    def __init__(self, action:Callable[[str, Team, Player, discord.Interaction], Awaitable[None]] = None, *, include_empty_teams=True, show_players_on_team = False):
         super().__init__()
         self.action = action
         self.includeEmptyTeams = include_empty_teams
@@ -714,7 +714,7 @@ class GameTeamView(discord.ui.View):
             action(Game:str, TeamID: int, interaction: discord.Interaction)
 
     """
-    def __init__(self, action:Callable[[str, "Team", discord.Interaction], Awaitable[None]] = None, *, include_empty_teams=True):
+    def __init__(self, action:Callable[[str, Team, discord.Interaction], Awaitable[None]] = None, *, include_empty_teams=True):
         super().__init__()
         self.action = action
         self.includeEmptyTeams = include_empty_teams
@@ -783,14 +783,3 @@ class Event():
         self.title=json["title"]
         self.location = json["location"]
         self.start = parser.parse(json["start"])
-
-class Team():
-    def __init__(self, json):
-        self.id = json["id"]
-        self.name = json["name"]
-
-class Player():
-    def __init__(self, json):
-        self.id = json["id"]
-        self.name = json["name"]
-        self.tag = json["screenName"]
