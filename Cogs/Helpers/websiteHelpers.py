@@ -172,11 +172,50 @@ class TeamCache():
                             print("Warning: No Teams retrieved into cache")
                     else:
                         print("Error: Failed retrieving Teams into cache")
+    
+    """
+    If game is specified, removes the team from the specifed game
+    Otherwise searches through all games
+    returns True if a team was removed
+    """
+    async def remove_cached(self, team:Team, game:str = None) -> bool:
+        if(game != None):
+            try:
+                self.teams[game].remove(team)
+            except ValueError:
+                return False
+            return True
+        
+        for gameName in GameNames:
+            try:
+                self.teams[gameName].remove(team)
+            except ValueError:
+                continue
+            return True
+        
+        return False
 
     async def get_all_teams(self, game:str) -> list[Team]:
         await self.update_cache()
 
         return self.teams[game]
+
+    """
+    If game is specified, returns a team with that id in that game
+    Otherwise searches through all games
+    returns None if no game matches the id
+    """
+    async def get_by_id(self, id:int, game:str = None) -> Union[Team, None]:
+        await self.update_cache()
+        if(game != None):
+            return utils.get(self.teams[game], id=id)
+        
+        for gameName in GameNames:
+            search = utils.get(self.teams[gameName], id=id)
+            if search != None:
+                return search
+        
+        return None
 
     """
     If game is specified, returns a team by that name in that game
@@ -222,3 +261,38 @@ class TeamCache():
                 return "A team with that name already exists!"
             else:
                 return "Failed to create team"
+    
+    """
+    Attempts to delete a Team.
+
+    If the server accepts the deletion, the team is removed from the cache and None is returned
+    Otherwise the failure message is returned.
+
+    Must specify at least id or name, ideally name and game
+    """
+    async def delete_team(self, id:int = None, name: str = None, game: str = None) -> Union[str, None]:
+        # Check it exists
+        team = None
+        if id != None:
+            team = await self.get_by_id(id, game)
+            if team == None:
+                return "Cannot find a team with that id"
+        elif name != None:
+            team = await self.get_by_name(name, game)
+            if team == None:
+                return "Cannot find a team with that name"
+        
+        if team == None:
+            return "Team name or id must be specified"
+        
+        status, response = await sendPost(f"DeleteTeam?TeamID={team.id}")
+
+        if(status == 200):
+            print(f"Team deleted: {team.name}")
+            await self.remove_cached(team, game)
+            return None
+        else:
+            if(response['message'] == "Invalid Team ID"):
+                return "Team does not exist"
+            else:
+                return "Failed to delete team, please try again or contact the Devs"

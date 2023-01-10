@@ -164,15 +164,13 @@ class Website(commands.Cog):
         await ctx.defer()
 
         async def delete_team_callback(gameName:str, team:Team, interaction:discord.Interaction) -> None:
-            status, response = await sendPost(f"DeleteTeam?TeamID={team.id}", None)
-            if(status == 200):
+            resp = await team_cache.delete_team(team.id, team.name, gameName)
+            
+            if(resp == None):
                 print(f"{interaction.user.name} deleted {gameName} Team {team.name}")
                 await interaction.message.edit(content = f"Deleted {gameName} Team {team.name}", view = None)
             else:
-                if(response['message'] == "Invalid Team ID"):
-                    await interaction.message.edit(content = f"Team does not exist", view = None)
-                else:
-                    await interaction.message.edit(content = f"Failed to delete team, please try again or contact the Devs", view = None)
+                await interaction.message.edit(content = resp, view = None)
         
         await ctx.respond("Select the Team to delete", view=GameTeamView(action = delete_team_callback))
     
