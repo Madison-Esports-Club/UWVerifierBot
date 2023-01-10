@@ -3,11 +3,17 @@ import json
 import discord
 from configparser import ConfigParser
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil import parser
 import httpx
 from discord.ext import commands, bridge
 from collections.abc import Callable, Awaitable
+
+from Cogs.Helpers.autocompleteHelpers import create_player_autocomplete, create_team_autocomplete
+from Cogs.Helpers.websiteHelpers import PlayerCache, TeamCache
+
+team_cache = TeamCache(timedelta(0,120))
+player_cache = PlayerCache(timedelta(0,120))
 
 GameNames = ["League of Legends", "Valorant", "Rainbow Six Seige", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
 GameOptions = []
@@ -99,7 +105,7 @@ class Website(commands.Cog):
             if(len(data) > 0):
                 events = []
                 for eventData in data:
-                    events.append(Event(eventData))
+                    events.append(Event(eventData)) # TODO truncate to 25
 
                 await ctx.respond("Select the event to delete", view=DeleteEventView(events))
             else:
@@ -229,25 +235,40 @@ class Website(commands.Cog):
 ###########################################################################
     @discord.slash_command(description = "Adds a Player to a Team", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
-    async def addplayer(self, ctx):
+    async def addplayer(
+        self,
+        ctx: discord.context.ApplicationContext,
+        game: discord.Option(str, "Choose what Game to look for Teams in", choices = GameNames),
+        teamName: discord.Option(str, "Select the Team to add to", name="team",autocomplete=create_team_autocomplete(team_cache)),
+        playerName: discord.Option(str, "Select the Player to add", name="player", autocomplete=create_player_autocomplete(player_cache))
+    ):
         await ctx.defer()
-
-        async def add_player_callback(gameName:str, team:Team, player:Player, interaction:discord.Interaction) -> None:
-            status, response = await sendPost(f"AddPlayerToTeam?TeamID={team.id}&PlayerID={player.id}", None)
-            if(status == 200):
-                print(f"{interaction.user.name} added {player.tag} to {team.name}")
-                await interaction.message.edit(content = f"Added Player {player.tag} to {team.name}", view = None)
-            else:
-                if(response['message'] == "Player already on Team"):
-                    await interaction.message.edit(content = f"Player is already on team.", view = None)
-                else:
-                    await interaction.message.edit(content = f"Failed to add player, please try again or contact the Devs", view = None)
+        team = await team_cache.get_by_name(teamName, game)
+        if team == None:
+            await ctx.respond(f"Could not find a team named {teamName} for {game} (Try using the autocomplete!)")
+            return
         
-        await ctx.respond("Select the Team and Player", view=GameTeamPlayerView(action = add_player_callback, show_players_on_team = False, include_empty_teams=True))
-    
+        player = await player_cache.find(playerName)
+        if player == None:
+            await ctx.respond(f"Could not find a player named {playerName} (Try using the autocomplete!)")
+            return
+
+        status, response = await sendPost(f"AddPlayerToTeam?TeamID={team.id}&PlayerID={player.id}", None)
+
+        if(status == 200):
+            print(f"{ctx.user} added {player} to {team}")
+            await ctx.respond(f"Added Player {playerName} to {teamName}")
+        else:
+            if(response['message'] == "Player already on Team"):
+                await ctx.respond(f"Player is already on team.")
+            else:
+                await ctx.respond(f"Failed to add player, please try again or contact the Devs")
+
     @addplayer.error
-    async def addplayer_error(self, ctx, error):
-        if isinstance(error, commands.MissingAnyRole):
+    async def addplayer_error(self, ctx: discord.context.ApplicationContext, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /addplayer \"<game>\" \"<team>\" \"<player>\"", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
             await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
             print(f"non-admin {ctx.message.author} tried to use addplayer")
         else:
@@ -651,7 +672,7 @@ class GameTeamPlayerView(discord.ui.View):
 
             if(len(data) > 0):
                 for teamData in data:
-                    teams.append(Team(teamData))
+                    teams.append(Team(teamData)) # TODO truncate to 25
 
                 self.replace_team_dropdown(TeamDropdown(teams, self.team_callback, 1))
 
@@ -683,7 +704,7 @@ class GameTeamPlayerView(discord.ui.View):
 
             if(len(data) > 0):
                 for playersData in data:
-                    players.append(Player(playersData))
+                    players.append(Player(playersData)) # TODO truncate to 25
 
                 self.replace_player_dropdown(PlayerDropdown(players, None, 2))
 
@@ -766,7 +787,7 @@ class GameTeamView(discord.ui.View):
 
             if(len(data) > 0):
                 for teamData in data:
-                    teams.append(Team(teamData))
+                    teams.append(Team(teamData)) # TODO truncate to 25
 
                 self.replace_team_dropdown(TeamDropdown(teams, None, 1))
 
