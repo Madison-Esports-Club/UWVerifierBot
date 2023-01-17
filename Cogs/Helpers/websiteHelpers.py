@@ -52,7 +52,7 @@ class Player():
 class PlayerCache():
     """
     Creates a new cache of players from the website.
-    
+
     refresh is the amount of time after which the cache is purged and
     all new data is pulled from the website
     """
@@ -61,13 +61,13 @@ class PlayerCache():
         self.last_updated = datetime.datetime.min
         self.refresh_interval = refresh
         self.lock = asyncio.Lock()
-    
+
     async def update_cache(self):
         # Do thread safety
         async with self.lock:
             if(self.last_updated + self.refresh_interval < datetime.datetime.now() ):
                 endpoint = "GetPlayers"
-                
+
                 status, data = await sendPost(endpoint)
 
                 if(status == 200):
@@ -82,7 +82,7 @@ class PlayerCache():
                         print("Warning: No Players retrieved into cache")
                 else:
                     print("Error: Failed retrieving Players into cache")
-    
+
     async def get_all_players(self) -> list[Player]:
         await self.update_cache()
 
@@ -95,7 +95,7 @@ class PlayerCache():
     async def get_by_tag(self, tag:str) -> Union[Player, None]:
         await self.update_cache()
         return utils.get(self.players, tag=tag)
-    
+
     """
     Attempts to find a player with the specified text. First checks names, then tags, then "tag - name".
     """
@@ -109,7 +109,7 @@ class PlayerCache():
         out = utils.get(self.players, tag=text)
         if out != None:
             return out
-        
+
         for player in self.players:
             if text == f"{player.tag} - {player.name}":
                 return player
@@ -134,14 +134,13 @@ class PlayerCache():
             self.players.append(player)
             return None
         else:
-            return "Failed to create Player"
-
+            return "Failed to create Player" #TODO DUPLICATE MESSAGE
         #TODO maybe add duplicate checking
 
 class TeamCache():
     """
     Creates a new cache of teams from the website.
-    
+
     refresh is the amount of time after which the cache is purged and
     all new data is pulled from the website
     """
@@ -150,14 +149,14 @@ class TeamCache():
         self.last_updated = datetime.datetime.min
         self.refresh_interval = refresh
         self.lock = asyncio.Lock()
-    
+
     async def update_cache(self):
         # Do thread safety
         async with self.lock:
             if(self.last_updated + self.refresh_interval < datetime.datetime.now() ):
                 for game in GameNames:
                     endpoint = f"GetTeams?GameName={game}"
-                    
+
                     status, data = await sendPost(endpoint)
 
                     if(status == 200):
@@ -172,7 +171,7 @@ class TeamCache():
                             print("Warning: No Teams retrieved into cache")
                     else:
                         print("Error: Failed retrieving Teams into cache")
-    
+
     """
     If game is specified, removes the team from the specifed game
     Otherwise searches through all games
@@ -185,14 +184,14 @@ class TeamCache():
             except ValueError:
                 return False
             return True
-        
+
         for gameName in GameNames:
             try:
                 self.teams[gameName].remove(team)
             except ValueError:
                 continue
             return True
-        
+
         return False
 
     async def get_all_teams(self, game:str) -> list[Team]:
@@ -209,12 +208,12 @@ class TeamCache():
         await self.update_cache()
         if(game != None):
             return utils.get(self.teams[game], id=id)
-        
+
         for gameName in GameNames:
             search = utils.get(self.teams[gameName], id=id)
             if search != None:
                 return search
-        
+
         return None
 
     """
@@ -226,12 +225,12 @@ class TeamCache():
         await self.update_cache()
         if(game != None):
             return utils.get(self.teams[game], name=name)
-        
+
         for gameName in GameNames:
             search = utils.get(self.teams[gameName], name=name)
             if search != None:
                 return search
-        
+
         return None
 
     """
@@ -258,10 +257,10 @@ class TeamCache():
             return None
         else:
             if(response['message'] == 'Duplicate Team Name'):
-                return "A team with that name already exists!"
+                return "A team with that name already exists!" #TODO DUPLICATE MESSAGE
             else:
                 return "Failed to create team"
-    
+
     """
     Attempts to delete a Team.
 
@@ -281,10 +280,10 @@ class TeamCache():
             team = await self.get_by_name(name, game)
             if team == None:
                 return "Cannot find a team with that name"
-        
+
         if team == None:
             return "Team name or id must be specified"
-        
+
         status, response = await sendPost(f"DeleteTeam?TeamID={team.id}")
 
         if(status == 200):
@@ -296,3 +295,18 @@ class TeamCache():
                 return "Team does not exist"
             else:
                 return "Failed to delete team, please try again or contact the Devs"
+
+async def add_email(email) -> bool:
+    endpoint = f"AddEmail?Email={email}"
+
+    status, response = await sendPost(endpoint)
+
+    if(status == 200):
+        print(f"Added Email {email} to the mailing list")
+        return True
+    else:
+        if(response != None and 'message' in response):
+            print(f"Error: Failed adding Email {email} to the mailing list: {response['message']}")
+        else:
+            print(f"Error: Failed to add Email {email}, no response from server")
+        return False

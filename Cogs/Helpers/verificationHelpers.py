@@ -5,10 +5,11 @@ import socket
 import datetime
 
 from Cogs.db import dbconnect
+from Cogs.Helpers.websiteHelpers import add_email
 
 
 ###########################################################################
-def insert_verified_user_record(user_id, email, name):
+async def insert_verified_user_record(user_id, email, name):
     global time
 
     cursor, conn = dbconnect()
@@ -17,6 +18,9 @@ def insert_verified_user_record(user_id, email, name):
     cursor.execute("INSERT INTO verified_users (user_id, email, time, full_name) VALUES (%s, %s, TIMESTAMP %s, %s);", [user_id, email, time, name])
     if(cursor.rowcount != 1):
         print(f"failed to insert verification record ({user_id}, {email}, {time})")
+    else:
+        await add_email(email)
+
     conn.commit()
     conn.close()
     return

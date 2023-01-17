@@ -35,7 +35,7 @@ class Verification(commands.Cog):
 
         if verified: #Prompts user to enter name to finish verifying
 
-            insert_verified_user_record(ctx.author.id, email, fullname)
+            await insert_verified_user_record(ctx.author.id, email, fullname)
             role = discord.utils.get(ctx.guild.roles, name = "Verified")
             await ctx.author.add_roles(role)
             await ctx.respond(embed = discord.Embed(title = f"{ctx.author}, you have been successfully verified!", color = color))
