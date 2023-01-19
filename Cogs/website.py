@@ -164,15 +164,15 @@ class Website(commands.Cog):
 
         async def delete_team_callback(gameName:str, team:Team, interaction:discord.Interaction) -> None:
             resp = await team_cache.delete_team(team.id, team.name, gameName)
-            
+
             if(resp == None):
                 print(f"{interaction.user.name} deleted {gameName} Team {team.name}")
                 await interaction.message.edit(content = f"Deleted {gameName} Team {team.name}", view = None)
             else:
                 await interaction.message.edit(content = resp, view = None)
-        
+
         await ctx.respond("Select the Team to delete", view=GameTeamView(action = delete_team_callback))
-    
+
     @deleteteam.error
     async def deleteteam_error(self, ctx, error):
         if isinstance(error, commands.MissingAnyRole):
@@ -236,7 +236,7 @@ class Website(commands.Cog):
         if team == None:
             await ctx.respond(f"Could not find a team named {teamName} for {game} (Try using the autocomplete!)")
             return
-        
+
         player = await player_cache.find(playerName)
         if player == None:
             await ctx.respond(f"Could not find a player named {playerName} (Try using the autocomplete!)")
@@ -280,9 +280,9 @@ class Website(commands.Cog):
                     await interaction.message.edit(content = f"Player is already on team.", view = None)
                 else:
                     await interaction.message.edit(content = f"Failed to remove player, please try again or contact the Devs", view = None)
-        
+
         await ctx.respond("Select the Team and Player", view=GameTeamPlayerView(action = remove_player_callback, show_players_on_team = True, include_empty_teams=False))
-    
+
     @removeplayer.error
     async def removeplayer_error(self, ctx, error):
         if isinstance(error, commands.MissingAnyRole):
@@ -434,11 +434,11 @@ class PlayerDropdown(discord.ui.Select):
         self.playerOptions = []
         for player in self.players:
             self.playerOptions.append(discord.SelectOption(label=f"{player.tag} - {player.name}", value=str(player.id)))
-        
+
         self.action = action
         super().__init__(
             row = row,
-            placeholder = "Choose a Player", 
+            placeholder = "Choose a Player",
             min_values = 1,
             max_values = 1,
             options = self.playerOptions
@@ -466,7 +466,7 @@ class TeamDropdown(discord.ui.Select):
         self.teamOptions = []
         for team in self.teams:
             self.teamOptions.append(discord.SelectOption(label=team.name, value=str(team.id),default = (team.id == defaultValue)))
-        
+
         self.action = action
         super().__init__(
             row = row,
@@ -500,7 +500,7 @@ class GameDropdown(discord.ui.Select):
             options = []
             for label in GameNames:
                 options.append(discord.SelectOption(label=label))
-        
+
         super().__init__(
             row = row,
             placeholder = "Choose a Game", # the placeholder text that will be displayed if nothing is selected
@@ -581,13 +581,13 @@ class GameTeamPlayerView(discord.ui.View):
         Sets whether teams with no players will show up in the team selector
             e.g. if you are removing players, this should be false.
         Defaults to True
-    
+
     show_players_on_team:
         Sets whether the player dropdown will show only players on the team or only those not on the team
             e.g. if you are removing players this should be true
             e.g. if you are adding players this should be false
         Defaults to False
-    
+
     action:
         Callback to be called when all three values are filled out and confirm is pressed.
         Method should take 4 arguments and be async:
@@ -676,7 +676,7 @@ class GameTeamPlayerView(discord.ui.View):
             endpoint += f"?IncludeTeamID={int(teamDropdown.selected)}" # Removing players from team
         else:
             endpoint += f"?ExcludeTeamID={int(teamDropdown.selected)}" # Adding players to team
-        
+
         status, data = await sendPost(endpoint)
 
         if(status == 200):
@@ -713,7 +713,7 @@ class GameTeamView(discord.ui.View):
         Sets whether teams with no players will show up in the team selector
 
         Defaults to True
-    
+
     action:
         Callback to be called when both values are selected and confirm is pressed.
         Method should take 3 arguments and be async:
