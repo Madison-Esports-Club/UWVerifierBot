@@ -189,16 +189,22 @@ class Website(commands.Cog):
         self,
         ctx,
         name:discord.Option(str, "Enter the real name of the player"),
-        tag:discord.Option(str, "Enter the screen name of the player")
+        tag:discord.Option(str, "Enter the screen name of the player"),
+        year:discord.Option(str, "Enter the player's year", choices=["Freshman", "Sophomore", "Junior", "Senior", "Graduate"]),
+        major:discord.Option(str, "Enter the player's major"),
+        icon:discord.Option(str, "Choose an icon for the player (Game - Rank)",required=False)
     ):
         await ctx.defer()
         logEmbed = discord.Embed(title = "New Player", color = discord.Color.teal())
-        resp = await player_cache.create_player(name, tag)
+        resp = await player_cache.create_player(name, tag, year, major, icon)
 
-        if(resp == None):
+        if(type(resp) is Player):
             print(f"{ctx.user.name} created a player: {name}, '{tag}'")
             logEmbed.add_field(name=("*Name*"),value = name, inline=False)
             logEmbed.add_field(name=("*Tag*"),value = tag, inline=False)
+            logEmbed.add_field(name=("*Year*"),value = year, inline=False)
+            logEmbed.add_field(name=("*Major*"),value = major, inline=False)
+            logEmbed.set_image(url=f"https://madisonesports.club/images/{resp.iconURL}.png")
 
             await ctx.respond(embed = logEmbed)
         else:

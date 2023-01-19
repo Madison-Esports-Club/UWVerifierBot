@@ -45,6 +45,10 @@ class Player():
         self.id = json["id"]
         self.name = json["name"]
         self.tag = json["screenName"]
+        if("iconURL" in json):
+            self.iconURL= json["iconURL"]
+        else:
+            self.iconURL = None
 
     def __str__(self):
         return f"{self.tag} - {self.name}"
@@ -118,21 +122,24 @@ class PlayerCache():
     """
     Attempts to create a Player.
 
-    If the server accepts the creation, the player is added to the cache and None is returned
+    If the server accepts the creation, the player is added to the cache and is returned
     Otherwise the failure message is returned.
     """
-    async def create_player(self, name: str, tag: str) -> Union[str, None]:
+    async def create_player(self, name: str, tag: str, year: str, major: str, icon: Union[str, None] = None) -> Union[str, Player]:
         data = {
             "Name": name,
-            "ScreenName": tag
+            "ScreenName": tag,
+            "Year": year,
+            "Major": major,
+            "IconString": icon
         }
         status, response = await sendPost("NewPlayer", data)
 
         if(status == 200):
-            player = Player({"id":response["id"], "name": name, "screenName":tag})
+            player = Player({"id":response["id"], "name": name, "screenName":tag, "iconURL": response["icon"]})
             print(f"Player created: {player}")
             self.players.append(player)
-            return None
+            return player
         else:
             return "Failed to create Player" #TODO DUPLICATE MESSAGE
         #TODO maybe add duplicate checking
