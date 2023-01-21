@@ -117,7 +117,7 @@ async def on_member_remove(member):
 @bot.event #Generic error handling
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
-        await ctx.send(embed=discord.Embed(title="Command not found! Use `!help` for a list of all commands"))
+        await ctx.send(embed=discord.Embed(title="Command not found! Use `/help` for a list of all commands"))
     elif isinstance(error, commands.CommandOnCooldown):
         await ctx.send(embed=discord.Embed(title="You are currently on cooldown!"))
     elif isinstance(error, commands.BotMissingPermissions):

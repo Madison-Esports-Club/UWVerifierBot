@@ -19,8 +19,8 @@
             ,"/unverify email email@wisc.edu": "Manually deletes any verification record containing the specified email (freeing it to be reused). Only accessible to Board Members, Game Officers, and Mods"
         },
         "misc":{
-            "!help": "Displays help menu"
-            ,"!ping": "Displays bot's current ping"
+            "/help [category]": "Displays help menu"
+            ,"/ping": "Displays bot's current ping"
         },
         "settings":{
             "!setwelcomemsg [message]": "Sets the bot message for when someone joins the server. Type %s where you want the user to be mentioned, or leave message blank to set to default (Requires `Manage Server` permission)"
