@@ -60,18 +60,12 @@ class Misc(commands.Cog):
     @discord.slash_command(name = "purge", debug_guilds=[887366492730036276]) #Clears previous x amount of messages (x between 1 & 50)
     @commands.has_guild_permissions(manage_messages = True)
     async def purge(self, ctx, limit: discord.Option(discord.SlashCommandOptionType.integer, "Amount of messages to clear (1-50)", required = True)):
-        # Currently disabled b/c ctx.message.channel no longer exists and can't find alternative
-        await ctx.respond(embed = discord.Embed(title = "Command currently disabled")) 
-        return
-        
         if limit > 50 or limit < 1:
             await ctx.respond(embed = discord.Embed(title = "Only 1 to 50 messages can be cleared at a time"))
             return
         try:
-            await ctx.message.channel.purge(limit = (limit + 1)) #To account for the deletion message itself
-            msg = await ctx.respond(embed = discord.Embed(title = f"Previous {limit} messages deleted"))
-            await asyncio.sleep(2)
-            await msg.delete()
+            await ctx.channel.purge(limit = (limit + 1))
+            await ctx.respond(embed = discord.Embed(title = f"Previous {limit} messages deleted"))
         except discord.Forbidden:
            await ctx.respond(embed = discord.Embed(title = "I do not have enough permissions to do this, please change my role permissions!"))
         except Exception as e:
