@@ -5,4 +5,4 @@ class HelpTypes(Enum):
     Verification = 'Verification'
     Misc = "Misc"
     Settings = "Settings"
-    Website = "WEBSITE"
+    Website = "Website"
