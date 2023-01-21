@@ -180,24 +180,19 @@ class TeamCache():
                         print("Error: Failed retrieving Teams into cache")
 
     """
-    If game is specified, removes the team from the specifed game
+    IRemoves the team from the specifed game
     Otherwise searches through all games
     returns True if a team was removed
     """
-    async def remove_cached(self, team:Team, game:str = None) -> bool:
-        if(game != None):
-            try:
-                self.teams[game].remove(team)
-            except ValueError:
-                return False
-            return True
+    async def remove_cached(self, team:Team, game:str) -> bool:
+        if(game not in GameNames):
+            return False
 
-        for gameName in GameNames:
-            try:
-                self.teams[gameName].remove(team)
-            except ValueError:
-                continue
-            return True
+        try:
+            self.teams[game].remove(team)
+        except ValueError:
+            return False
+        return True
 
         return False
 
@@ -225,7 +220,7 @@ class TeamCache():
 
     """
     If game is specified, returns a team by that name in that game
-    Otherwise searches through all games
+    Otherwise searches through all games and returns the first matching game (may not be unique!!!!)
     returns None if no game matches the name
     """
     async def get_by_name(self, name:str, game:str = None) -> Union[Team, None]:
@@ -276,7 +271,10 @@ class TeamCache():
 
     Must specify at least id or name, ideally name and game
     """
-    async def delete_team(self, id:int = None, name: str = None, game: str = None) -> Union[str, None]:
+    async def delete_team(self, game: str, id: int = None, name: str = None) -> Union[str, None]:
+        if(game == None):
+            return "You must specify the game that the team is under."
+
         # Check it exists
         team = None
         if id != None:
@@ -316,4 +314,19 @@ async def add_email(email) -> bool:
             print(f"Error: Failed adding Email {email} to the mailing list: {response['message']}")
         else:
             print(f"Error: Failed to add Email {email}, no response from server")
+        return False
+
+async def remove_email(email) -> bool:
+    endpoint = f"RemoveEmail?Email={email}"
+
+    status, response = await sendPost(endpoint)
+
+    if(status == 200):
+        print(f"Removed Email {email} from the mailing list")
+        return True
+    else:
+        if(response != None and 'message' in response):
+            print(f"Error: Failed removing Email {email} from the mailing list: {response['message']}")
+        else:
+            print(f"Error: Failed to remove Email {email}, no response from server")
         return False

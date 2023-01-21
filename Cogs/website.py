@@ -10,7 +10,7 @@ from discord.ext import commands, bridge
 from collections.abc import Callable, Awaitable
 
 from Cogs.Helpers.autocompleteHelpers import create_player_autocomplete, create_team_autocomplete
-from Cogs.Helpers.websiteHelpers import PlayerCache, TeamCache, sendPost, Player, Team
+from Cogs.Helpers.websiteHelpers import PlayerCache, TeamCache, sendPost, Player, Team, add_email, remove_email
 
 team_cache = TeamCache(timedelta(0,120))
 player_cache = PlayerCache(timedelta(0,120))
@@ -124,7 +124,7 @@ class Website(commands.Cog):
             print("Delete Event error: ", error)
             raise error
 ###################################################################################
-    @discord.slash_command(description = "Creates a Team on the Website", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @discord.slash_command(description = "Creates a Team on the Website", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def createteam(
         self,
@@ -157,13 +157,13 @@ class Website(commands.Cog):
             print("Create Team error: ", error)
             raise error
 ###################################################################################
-    @discord.slash_command(description = "Deletes a Team from the Website", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @discord.slash_command(description = "Deletes a Team from the Website", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def deleteteam(self, ctx):
         await ctx.defer()
 
         async def delete_team_callback(gameName:str, team:Team, interaction:discord.Interaction) -> None:
-            resp = await team_cache.delete_team(team.id, team.name, gameName)
+            resp = await team_cache.delete_team(gameName, team.id, team.name)
 
             if(resp == None):
                 print(f"{interaction.user.name} deleted {gameName} Team {team.name}")
@@ -183,7 +183,7 @@ class Website(commands.Cog):
             print("Delete Team error: ", error)
             raise error
 ###########################################################################
-    @discord.slash_command(description = "Creates a Player on the Website", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @discord.slash_command(description = "Creates a Player on the Website", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def createplayer(
         self,
@@ -222,7 +222,7 @@ class Website(commands.Cog):
             print("Create Player error: ", error)
             raise error
 ###########################################################################
-    @discord.slash_command(description = "Adds a Player to a Team", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @discord.slash_command(description = "Adds a Player to a Team", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def addplayer(
         self,
@@ -265,7 +265,7 @@ class Website(commands.Cog):
             print("Add Player error: ", error)
             raise error
 ###########################################################################
-    @discord.slash_command(description = "Removes a Player from a Team", debug_guilds=[887366492730036276], guild_ids=[887366492730036276])
+    @discord.slash_command(description = "Removes a Player from a Team", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def removeplayer(self, ctx):
         await ctx.defer()
@@ -292,6 +292,34 @@ class Website(commands.Cog):
             await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
             print("Remove Player error: ", error)
             raise error
+###########################################################################
+    @discord.slash_command(description = "Subscribes an email to the mailing list", debug_guilds=[887366492730036276])
+    async def subscribe(self, ctx, email):
+        await ctx.defer()
+        if (await add_email(email)):
+            await ctx.respond("You've been successfully subscribed to our mailing list!")
+        else:
+            await ctx.respond(f"Sorry, we couldn't subscribe you, are you sure that email ({email}) is not already subscribed?")
+
+    @removeplayer.error
+    async def subscribe_error(self, ctx, error):
+        await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+        print("Subscribe error: ", error)
+        raise error
+###########################################################################
+    @discord.slash_command(description = "Unsubscribes an email from the mailing list", debug_guilds=[887366492730036276])
+    async def unsubscribe(self, ctx, email):
+        await ctx.defer()
+        if (await remove_email(email)):
+            await ctx.respond("You've been successfully unsubscribed from the mailing list.")
+        else:
+            await ctx.respond(f"Sorry, we couldn't unsubscribe you, are you sure that email ({email}) is subscribed?")
+
+    @removeplayer.error
+    async def unsubscribe_error(self, ctx, error):
+        await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+        print("Unsubscribe error: ", error)
+        raise error
 ###########################################################################
 class EventDropdown(discord.ui.Select):
     def __init__(self, events):
