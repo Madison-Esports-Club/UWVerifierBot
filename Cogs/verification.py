@@ -1,11 +1,10 @@
 import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
-from asyncio import TimeoutError as asyncioTimeout
 from pytz import timezone
 
 from Cogs.db import dbconnect
-from Cogs.Helpers.verificationHelpers import insert_verified_user_record, verify_user, get_verification_record
+from Cogs.Helpers.helpers import insert_verified_user_record, verify_user, get_verification_record
 
 #verified_table_name = "verified_users"
 #verification_attempt_table_name = "verification_requests"
