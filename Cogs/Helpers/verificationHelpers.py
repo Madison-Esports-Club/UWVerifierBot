@@ -10,7 +10,6 @@ from Cogs.db import dbconnect
 # Prevents non-text channel from being used since SlashCommandOptionType.textChannel doesn't exist
 def checkTextChannel(channel):
     return type(channel) == discord.channel.TextChannel
-        
 ###########################################################################
 def insert_verified_user_record(user_id, email, name):
     global time

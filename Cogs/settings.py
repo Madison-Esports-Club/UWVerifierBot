@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 
-from Cogs.Helpers.helpers import checkTextChannel
+from Cogs.Helpers.verificationHelpers import checkTextChannel
 from Cogs.db import dbconnect
 
 class Settings(commands.Cog):
@@ -13,7 +13,6 @@ class Settings(commands.Cog):
     async def setwelcomechannel(self, ctx, channel: discord.Option(discord.SlashCommandOptionType.channel, "Select channel")):
         if (not checkTextChannel(channel)):
             return await ctx.respond(embed = discord.Embed(title = "Channel selected must be a text channel", color = discord.Color.red()))
-        
         cursor,conn = dbconnect() #Opens connection to db
         channel = channel.id
         try:
@@ -34,7 +33,6 @@ class Settings(commands.Cog):
             print (e)
         await ctx.respond(embed = discord.Embed(title = "Join channel set!", color = discord.Color.green()))
         conn.close() #Closes connection to db
-
 
     @setwelcomechannel.error
     async def clear_error(self, ctx, error):
