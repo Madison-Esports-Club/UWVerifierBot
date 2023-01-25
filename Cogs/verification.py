@@ -1,7 +1,6 @@
 import discord
 from discord.commands import SlashCommandGroup
 from discord.ext import commands
-from asyncio import TimeoutError as asyncioTimeout
 from pytz import timezone
 
 from Cogs.db import dbconnect
