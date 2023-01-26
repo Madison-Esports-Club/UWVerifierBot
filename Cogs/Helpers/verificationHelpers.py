@@ -7,7 +7,10 @@ import datetime
 from Cogs.db import dbconnect
 from Cogs.Helpers.websiteHelpers import add_email
 
-
+###########################################################################
+# Prevents non-text channel from being used since SlashCommandOptionType.textChannel doesn't exist
+def checkTextChannel(channel):
+    return type(channel) == discord.channel.TextChannel
 ###########################################################################
 async def insert_verified_user_record(user_id, email, name):
     global time
