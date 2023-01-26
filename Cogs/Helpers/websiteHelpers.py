@@ -22,10 +22,11 @@ async def sendPost(endpoint, json = None):
         host = variables["WEBSITE_IP"]
 
     headers = {"Authorization" : headertext}
-    url = f'http://{host}/api/{endpoint}'
+    url = f'https://{host}/api/{endpoint}'
     async with httpx.AsyncClient(verify = False) as client:
         resp = await client.post(url, json = json, headers = headers)
         #TODO check for auth failures
+        print(f'{url}: {resp}')
         try:
             print(f'{url}: {resp.json()}')
         except ValueError:
@@ -177,7 +178,7 @@ class TeamCache():
                         else:
                             print("Warning: No Teams retrieved into cache")
                     else:
-                        print("Error: Failed retrieving Teams into cache")
+                        print(f"Error: Failed retrieving Teams into cache, {status}, {data}")
 
     """
     IRemoves the team from the specifed game
