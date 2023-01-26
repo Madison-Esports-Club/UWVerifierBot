@@ -15,15 +15,36 @@ bot=commands.Bot(command_prefix = commands.when_mentioned_or("!")
                 ,intents = discord.Intents().all())
 bot.remove_command("help") #Removes discord built-in help command
 ###########################################################################
+
+connected = False
+disconnects = 0
+
 @bot.event #Loads all cogs and initiates bot
 async def on_ready():
+    global connected, disconnects
     randNum = random.randint(1, 2) #Bot status
     if randNum==1:
         await bot.change_presence(activity = discord.Activity(type = discord.ActivityType.watching, name = "Madison Gaming & Esports"))
     else:
         await bot.change_presence(activity = discord.Game("video games with Badgers"))
 
+    connected = True
+    disconnects = 0
     print(bot.user.name, "successfully connected to Discord")
+###########################################################################
+@bot.event
+async def on_disconnect():
+    global connected, disconnects
+    connected = False
+    disconnects+=1
+    print(bot.user.name, f"Has been disconnected from Discord ({disconnects} in a row)")
+###########################################################################
+@bot.event
+async def on_resumed():
+    global connected, disconnects
+    connected = True
+    disconnects = 0
+    print(bot.user.name, "Has resumed a connection to Discord")
 ###########################################################################
 @bot.event #Gives Verified role to user if they are in the db already
 async def on_member_join(member):
