@@ -4,6 +4,9 @@ import httpx
 import datetime
 from discord import utils
 import asyncio
+import hashlib
+from mailchimp_marketing import Client
+from mailchimp_marketing.api_client import ApiClientError
 
 from typing import Union
 
@@ -32,6 +35,34 @@ async def sendPost(endpoint, json = None):
         except ValueError:
             return resp.status_code, None
         return resp.status_code, resp.json()["value"]
+###############################################################################
+async def sendMailchimp(email, status) -> bool:
+    config_object = ConfigParser()
+    config_object.read("BotVariables.ini")
+    variables = config_object["variables"]
+
+    mailchimp = Client()
+    mailchimp.set_config({
+    "api_key": variables["MAILCHIMP_API"],
+    "server": "us21"
+    })
+
+    list_id = variables["MAILCHIMP_LIST_ID"]
+
+    member_info = {
+        "email_address": email,
+        "status_if_new": status,
+        "status": status
+    }
+    member_email_hash = hashlib.md5(email.encode('utf-8').lower()).hexdigest()
+
+    try:
+        response = mailchimp.lists.set_list_member(list_id, member_email_hash, member_info)
+        print(f"Updated {email} to {response['status']}")
+        return True
+    except ApiClientError as error:
+        print(f"An exception occurred while updating email {email} to {status}: {error}")
+        return False
 ###############################################################################
 class Team():
     def __init__(self, json):
@@ -303,31 +334,7 @@ class TeamCache():
                 return "Failed to delete team, please try again or contact the Devs"
 
 async def add_email(email) -> bool:
-    endpoint = f"AddEmail?Email={email}"
-
-    status, response = await sendPost(endpoint)
-
-    if(status == 200):
-        print(f"Added Email {email} to the mailing list")
-        return True
-    else:
-        if(response != None and 'message' in response):
-            print(f"Error: Failed adding Email {email} to the mailing list: {response['message']}")
-        else:
-            print(f"Error: Failed to add Email {email}, no response from server")
-        return False
+    return await sendMailchimp(email, "subscribed")
 
 async def remove_email(email) -> bool:
-    endpoint = f"RemoveEmail?Email={email}"
-
-    status, response = await sendPost(endpoint)
-
-    if(status == 200):
-        print(f"Removed Email {email} from the mailing list")
-        return True
-    else:
-        if(response != None and 'message' in response):
-            print(f"Error: Failed removing Email {email} from the mailing list: {response['message']}")
-        else:
-            print(f"Error: Failed to remove Email {email}, no response from server")
-        return False
+    return await sendMailchimp(email, "unsubscribed")
