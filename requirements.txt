@@ -5,3 +5,4 @@ pytz
 dnspython
 httpx
 python-dateutil
+mailchimp-marketing
