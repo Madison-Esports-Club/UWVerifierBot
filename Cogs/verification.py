@@ -5,6 +5,7 @@ from pytz import timezone
 
 from Cogs.db import dbconnect
 from Cogs.Helpers.verificationHelpers import insert_verified_user_record, verify_user, get_verification_record
+from Cogs.Helpers.websiteHelpers import add_email
 
 #verified_table_name = "verified_users"
 #verification_attempt_table_name = "verification_requests"
@@ -13,18 +14,22 @@ class Verification(commands.Cog):
     def __init__(self, bot):
         self.bot=bot
 ###########################################################################
-    @discord.slash_command(name='verify', description="Verifies a user for access to locked channels", debug_guilds=[887366492730036276])
+    @discord.slash_command(name='verify', description="Verifies a user for access to locked channels, and also adds them to our mailing list!", debug_guilds=[887366492730036276])
     async def verify(
         self,
         ctx,
         email: discord.Option(str, "Enter your wisc.edu email", required = True),
-        fullname: discord.Option(str, "Enter your full name", required = True)
+        fullname: discord.Option(str, "Enter your full name", required = True),
+        subscribe: discord.Option(bool, "Do you want to subscribe to our mailing list?", required = True)
     ):
         if(discord.utils.get(ctx.author.roles, name = "Verified") != None): # We could have this check the DB, would maybe cause issues with manually verified folks.
             await ctx.respond(embed = discord.Embed(title = "You are already verified!", description = "*If you believe this is an error, please message a board member*", color = discord.Color.red()))
             return
 
         await ctx.defer()
+        
+        if(subscribe):
+            add_email(email)
 
         #Trims parameters
         email = email.strip()
