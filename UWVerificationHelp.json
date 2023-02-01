@@ -7,7 +7,7 @@
             "`help`, `ping`"
         ,
         "Website":
-            "`createevent`, `changeinhouse`, `deleteevent`, `createteam`, `deleteteam`, `createplayer`, `addplayer`, `removeplayer`"
+            "`createevent`, `changeinhouse`, `deleteevent`, `createteam`, `deleteteam`, `createplayer`, `editplayer`, `deleteplayer` , `addplayer`, `removeplayer`"
     },
 
     "full": {
@@ -39,6 +39,8 @@
             ,"/createteam (game) (name)": "Creates a new team on the website under the specified Game with the specified Name."
             ,"/deleteteam": "Opens a menu allowing the user to delete a team from the website completely."
             ,"/createplayer (name) (tag) (year) (major) [icon]": "Creates a new player that can be added to a team, must include all information. Icon can be any combination of a game name and rank, e.g.: 'League of Legends - Gold 2'"
+            ,"/editplayer (player) [new_name] [new_tag] [new_year] [new_major] [new_icon]": "Edits the player in the first argument, can include all or none of the other fields."
+            ,"/deleteplayer (player)": "Deletes the player in the first argument, always use one of the autocomplete options."
             ,"/addplayer (game) (team) (player)": "Adds a player to a team, the team field will autocomplete teams under the game selected. Always use one of the autocomplete suggestions for player name (can start typing real or in-game name)"
             ,"/removeplayer": "Opens a menu allowing you to remove a player from a team"
         }
