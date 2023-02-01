@@ -284,7 +284,7 @@ class Website(commands.Cog):
             await ctx.respond(f"Error: {response}")
         else:
             print(f"{ctx.user} deleted {player}")
-            await ctx.response(f"Deleted player {player.name}")
+            await ctx.respond(f"Deleted player {player.name}")
 
     @deleteplayer.error
     async def deleteplayer_error(self, ctx: discord.context.ApplicationContext, error):
@@ -304,11 +304,11 @@ class Website(commands.Cog):
         self,
         ctx: discord.context.ApplicationContext,
         playerName: discord.Option(str, "Select the Player to edit", name="player", autocomplete=create_player_autocomplete(player_cache)),
-        newName:discord.Option(str, "Enter the real name of the player",required=False),
-        newTag:discord.Option(str, "Enter the screen name of the player",required=False),
-        newYear:discord.Option(str, "Enter the player's year", choices=["Freshman", "Sophomore", "Junior", "Senior", "Graduate"],required=False),
-        newMajor:discord.Option(str, "Enter the player's major",required=False),
-        newIcon:discord.Option(str, "Choose an icon for the player (Game - Rank)",required=False)
+        newName:discord.Option(str, "Enter the real name of the player", name="new_name",required=False),
+        newTag:discord.Option(str, "Enter the screen name of the player", name="new_tag", required=False),
+        newYear:discord.Option(str, "Enter the player's year", name="new_year", choices=["Freshman", "Sophomore", "Junior", "Senior", "Graduate"],required=False),
+        newMajor:discord.Option(str, "Enter the player's major", name="new_major", required=False),
+        newIcon:discord.Option(str, "Choose an icon for the player (Game - Rank)", name="new_icon", required=False)
     ):
         await ctx.defer()
 
@@ -321,11 +321,12 @@ class Website(commands.Cog):
         if response is not None:
             await ctx.respond(f"Error: {response}")
         else:
-            print(f"{ctx.user.name} edited a player: {name}, '{tag}'")
-            logEmbed.add_field(name=("*Name*"),value = name, inline=False)
-            logEmbed.add_field(name=("*Tag*"),value = tag, inline=False)
-            logEmbed.add_field(name=("*Year*"),value = year, inline=False)
-            logEmbed.add_field(name=("*Major*"),value = major, inline=False)
+            print(f"{ctx.user.name} edited a player: {player.name}, '{player.tag}'")
+            logEmbed = discord.Embed(title = "New Player", color = discord.Color.teal())
+            logEmbed.add_field(name=("*Name*"),value =player. name, inline=False)
+            logEmbed.add_field(name=("*Tag*"),value = player.tag, inline=False)
+            logEmbed.add_field(name=("*Year*"),value = player.year, inline=False)
+            logEmbed.add_field(name=("*Major*"),value = player.major, inline=False)
             logEmbed.set_image(url=f"https://madisonesports.club/images/{player.iconURL}.png")
 
             await ctx.respond(embed = logEmbed)
