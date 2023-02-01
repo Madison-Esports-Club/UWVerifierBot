@@ -265,6 +265,83 @@ class Website(commands.Cog):
             print("Add Player error: ", error)
             raise error
 ###########################################################################
+    @discord.slash_command(description = "Deletes a Player", debug_guilds=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def deleteplayer(
+        self,
+        ctx: discord.context.ApplicationContext,
+        playerName: discord.Option(str, "Select the Player to delete", name="player", autocomplete=create_player_autocomplete(player_cache))
+    ):
+        await ctx.defer()
+
+        player = await player_cache.find(playerName)
+        if player == None:
+            await ctx.respond(f"Could not find a player named {playerName} (Try using the autocomplete!)")
+            return
+        response = await player_cache.delete_player(player)
+
+        if response is not None:
+            await ctx.respond(f"Error: {response}")
+        else:
+            print(f"{ctx.user} deleted {player}")
+            await ctx.response(f"Deleted player {player.name}")
+
+    @deleteplayer.error
+    async def deleteplayer_error(self, ctx: discord.context.ApplicationContext, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /deleteplayer \"<player>\"", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use deleteplayer")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Delete Player error: ", error)
+            raise error
+###########################################################################
+    @discord.slash_command(description = "Edits a Player's information", debug_guilds=[887366492730036276])
+    @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
+    async def editplayer(
+        self,
+        ctx: discord.context.ApplicationContext,
+        playerName: discord.Option(str, "Select the Player to edit", name="player", autocomplete=create_player_autocomplete(player_cache)),
+        newName:discord.Option(str, "Enter the real name of the player",required=False),
+        newTag:discord.Option(str, "Enter the screen name of the player",required=False),
+        newYear:discord.Option(str, "Enter the player's year", choices=["Freshman", "Sophomore", "Junior", "Senior", "Graduate"],required=False),
+        newMajor:discord.Option(str, "Enter the player's major",required=False),
+        newIcon:discord.Option(str, "Choose an icon for the player (Game - Rank)",required=False)
+    ):
+        await ctx.defer()
+
+        player = await player_cache.find(playerName)
+        if player == None:
+            await ctx.respond(f"Could not find a player named {playerName} (Try using the autocomplete!)")
+            return
+        response = await player_cache.edit_player(player, newName, newTag, newYear, newMajor, newIcon)
+
+        if response is not None:
+            await ctx.respond(f"Error: {response}")
+        else:
+            print(f"{ctx.user.name} edited a player: {name}, '{tag}'")
+            logEmbed.add_field(name=("*Name*"),value = name, inline=False)
+            logEmbed.add_field(name=("*Tag*"),value = tag, inline=False)
+            logEmbed.add_field(name=("*Year*"),value = year, inline=False)
+            logEmbed.add_field(name=("*Major*"),value = major, inline=False)
+            logEmbed.set_image(url=f"https://madisonesports.club/images/{player.iconURL}.png")
+
+            await ctx.respond(embed = logEmbed)
+
+    @editplayer.error
+    async def editplayer_error(self, ctx: discord.context.ApplicationContext, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            await ctx.respond(embed = discord.Embed(title = "Missing required argument", description = "Correct usage: /editplayer \"<player>\" \"(new name)\" \"(new tag)\" \"(new year)\" \"(new major)\" \"(new Icon)\"", color = discord.Color.red()))
+        elif isinstance(error, commands.MissingAnyRole):
+            await ctx.respond(embed = discord.Embed(title = "Missing required permission", color = discord.Color.red()))
+            print(f"non-admin {ctx.message.author} tried to use editplayer")
+        else:
+            await ctx.respond(embed = discord.Embed(title = "Unknown error. Please contact developers to check logs", color = discord.Color.red()))
+            print("Edit Player error: ", error)
+            raise error
+###########################################################################
     @discord.slash_command(description = "Removes a Player from a Team", debug_guilds=[887366492730036276])
     @commands.has_any_role('Board Member', 'Game Officer', 'Bot Technician', 'Mod', 'Faculty Advisor')
     async def removeplayer(self, ctx):
