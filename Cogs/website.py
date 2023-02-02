@@ -12,8 +12,8 @@ from collections.abc import Callable, Awaitable
 from Cogs.Helpers.autocompleteHelpers import create_player_autocomplete, create_team_autocomplete
 from Cogs.Helpers.websiteHelpers import PlayerCache, TeamCache, sendPost, Player, Team, add_email, remove_email
 
-team_cache = TeamCache(timedelta(0,120))
-player_cache = PlayerCache(timedelta(0,120))
+team_cache = TeamCache(timedelta(0,600))
+player_cache = PlayerCache(timedelta(0,600))
 
 GameNames = ["League of Legends", "Valorant", "Rainbow Six Seige", "Overwatch", "CS:GO", "Smite", "Rocket League", "DotA 2", "Call of Duty", "Apex Legends"]
 GameOptions = []
@@ -143,7 +143,7 @@ class Website(commands.Cog):
 
             await ctx.respond(embed = logEmbed)
         else:
-            await ctx.respond(content = resp)
+            await ctx.respond(embed = discord.Embed(title = "Error", description = f"{resp}", color = discord.Color.red()))
 
     @createteam.error
     async def createteam_error(self, ctx, error):
@@ -208,7 +208,7 @@ class Website(commands.Cog):
 
             await ctx.respond(embed = logEmbed)
         else:
-            await ctx.respond(resp)
+            await ctx.respond(embed = discord.Embed(title = "Error", description = f"{resp}", color = discord.Color.red()))
 
     @createplayer.error
     async def createplayer_error(self, ctx, error):
@@ -234,24 +234,24 @@ class Website(commands.Cog):
         await ctx.defer()
         team = await team_cache.get_by_name(teamName, game)
         if team == None:
-            await ctx.respond(f"Could not find a team named {teamName} for {game} (Try using the autocomplete!)")
+            await ctx.respond(embed = discord.Embed(title = "Error", description = f"Could not find a team named {teamName} for {game} (Try using the autocomplete!)", color = discord.Color.red()))
             return
 
         player = await player_cache.find(playerName)
         if player == None:
-            await ctx.respond(f"Could not find a player named {playerName} (Try using the autocomplete!)")
+            await ctx.respond(embed = discord.Embed(title = "Error", description = f"Could not find a player named {playerName} (Try using the autocomplete!)", color = discord.Color.red()))
             return
 
         status, response = await sendPost(f"AddPlayerToTeam?TeamID={team.id}&PlayerID={player.id}", None)
 
         if(status == 200):
             print(f"{ctx.user} added {player} to {team}")
-            await ctx.respond(f"Added Player {playerName} to {teamName}")
+            await ctx.respond(embed = discord.Embed(title = "Success", description = f"Added Player {playerName} to {teamName}", color = discord.Color.green()))
         else:
             if(response['message'] == "Player already on Team"):
-                await ctx.respond(f"Player is already on team.")
+                await ctx.respond(embed = discord.Embed(title = "Error", description = f"Player is already on team.", color = discord.Color.red()))
             else:
-                await ctx.respond(f"Failed to add player, please try again or contact the Devs")
+                await ctx.respond(embed = discord.Embed(title = "Error", description = f"Failed to add player, please try again or contact the Devs", color = discord.Color.red()))
 
     @addplayer.error
     async def addplayer_error(self, ctx: discord.context.ApplicationContext, error):
@@ -276,15 +276,15 @@ class Website(commands.Cog):
 
         player = await player_cache.find(playerName)
         if player == None:
-            await ctx.respond(f"Could not find a player named {playerName} (Try using the autocomplete!)")
+            await ctx.respond(embed = discord.Embed(title = "Error", description = f"Could not find a player named {playerName} (Try using the autocomplete!)", color = discord.Color.red()))
             return
         response = await player_cache.delete_player(player)
 
         if response is not None:
-            await ctx.respond(f"Error: {response}")
+            await ctx.respond(embed = discord.Embed(title = "Error", description = f"{response}", color = discord.Color.red()))
         else:
             print(f"{ctx.user} deleted {player}")
-            await ctx.respond(f"Deleted player {player.name}")
+            await ctx.respond(embed = discord.Embed(title = "Success", description = f"Deleted player {player.name}", color = discord.Color.green()))
 
     @deleteplayer.error
     async def deleteplayer_error(self, ctx: discord.context.ApplicationContext, error):
@@ -314,12 +314,12 @@ class Website(commands.Cog):
 
         player = await player_cache.find(playerName)
         if player == None:
-            await ctx.respond(f"Could not find a player named {playerName} (Try using the autocomplete!)")
+            await ctx.respond(embed = discord.Embed(title = "Error", description = f"Could not find a player named {playerName} (Try using the autocomplete!)", color = discord.Color.red()))
             return
         response = await player_cache.edit_player(player, newName, newTag, newYear, newMajor, newIcon)
 
         if response is not None:
-            await ctx.respond(f"Error: {response}")
+            await ctx.respond(embed = discord.Embed(title = "Error", description = f"{response}", color = discord.Color.red()))
         else:
             print(f"{ctx.user.name} edited a player: {player.name}, '{player.tag}'")
             logEmbed = discord.Embed(title = "New Player", color = discord.Color.teal())
