@@ -85,6 +85,17 @@ class Player():
     def __str__(self):
         return f"{self.tag} - {self.name}"
 
+    def load(self, json):
+        self.id = json["id"]
+        self.name = json["name"]
+        self.tag = json["screenName"]
+        self.year = json["year"]
+        self.major = json["major"]
+        if("iconURL" in json):
+            self.iconURL= json["iconURL"]
+        else:
+            self.iconURL = None
+
 class PlayerCache():
     """
     Creates a new cache of players from the website.
@@ -176,6 +187,55 @@ class PlayerCache():
             return "Failed to create Player" #TODO DUPLICATE MESSAGE
         #TODO maybe add duplicate checking
 
+    """
+    Attempts to delete a Player.
+
+    If the server accepts the deletion, the player is removed from the cache and None is returned
+    Otherwise the failure message is returned.
+    """
+    async def delete_player(self, player:Player) -> Union[str, None]:
+        status, response = await sendPost(f"DeletePlayer?PlayerID={player.id}")
+
+        if(status == 200):
+            print(f"Player deleted: {player.name}")
+            if(player not in self.players):
+                return None
+            try:
+                self.players.remove(player)
+            except ValueError:
+                return None
+            return None
+        else:
+            if(response['message'] == "Invalid Player ID"):
+                return "Player does not exist"
+            else:
+                return "Failed to delete player, please try again or contact the Devs"
+
+    """
+    Attempts to edit a Player.
+
+    If the server accepts the edit, the player is changed in the cache and None is returned
+    Otherwise the failure message is returned.
+    """
+    async def edit_player(self, player: Player, name: Union[str, None], tag: Union[str, None], year: Union[str, None], major: Union[str, None], icon: Union[str, None]) -> Union[str, None]:
+        data = { #TODO check nullability on the .NET side6
+            "ID": player.id,
+            "Name": name,
+            "ScreenName": tag,
+            "Year": year,
+            "Major": major,
+            "IconString": icon
+        }
+        status, response = await sendPost("EditPlayer", data) #edit player will return an entire player's data
+
+        if(status == 200):
+            player.load(response['player']) #Have to edit existing object
+            print(f"Player edited: {player}")
+            return None
+        else:
+            return "Failed to edit Player"
+        #TODO maybe add duplicate checking
+
 class TeamCache():
     """
     Creates a new cache of teams from the website.
@@ -212,7 +272,7 @@ class TeamCache():
                         print(f"Error: Failed retrieving Teams into cache, {status}, {data}")
 
     """
-    IRemoves the team from the specifed game
+    Removes the team from the specifed game
     Otherwise searches through all games
     returns True if a team was removed
     """
